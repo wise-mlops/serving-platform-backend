@@ -1,0 +1,8 @@
+# local environment
+.idea
+venv
+.pytest_cache
+.coverage
+/logs/
+src/version_info.py
+src/sql_app.db
