@@ -6,3 +6,4 @@ venv
 /logs/
 src/version_info.py
 src/sql_app.db
+cert

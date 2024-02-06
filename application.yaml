@@ -1,0 +1,21 @@
+local:
+  CLUSTER:
+    KUBE_CONFIG_PATH: 'C:\Users\user\Desktop\project\mlops\minio'
+    ISTIO_INGRESS_HOST: ''
+    VOLUME_NFS_SERVER: ''
+    VOLUME_NFS_PATH: ''
+  MINIO:
+    ENDPOINT: 'http://local.api.minio.storage-system.labs.wisenut.com'
+    ACCESS_KEY: 'minio'
+    SECRET_KEY: 'minio123'
+
+container:
+  CLUSTER:
+    KUBE_CONFIG_PATH: '/var/run/secrets/kubernetes.io/serviceaccount'
+    ISTIO_INGRESS_HOST: 'https://'
+    VOLUME_NFS_SERVER: ''
+    VOLUME_NFS_PATH: ''
+  MINIO:
+    ENDPOINT: 'http://storage-system-minio.storage-system.svc.cluster.local:9000'
+    ACCESS_KEY: 'minio'
+    SECRET_KEY: 'minio123'
