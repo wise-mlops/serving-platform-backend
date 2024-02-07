@@ -13,3 +13,4 @@ class Response(BaseModel):
     @classmethod
     def from_result(cls, module_code, result):
         return cls(code=int(f"{module_code}{status.HTTP_200_OK}"), result=result)
+

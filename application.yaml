@@ -1,6 +1,6 @@
 local:
   CLUSTER:
-    KUBE_CONFIG_PATH: 'C:\Users\user\Desktop\project\mlops\minio'
+    KUBE_CONFIG_PATH: 'C:/Users/user/Desktop/project/mlops/Kserve-API/cert/config'
     ISTIO_INGRESS_HOST: ''
     VOLUME_NFS_SERVER: ''
     VOLUME_NFS_PATH: ''
