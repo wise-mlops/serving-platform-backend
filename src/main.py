@@ -74,6 +74,12 @@ async def kserve_exception_handler(request: Request, exc: KServeException):
                         content={"code": exc.code, "message": exc.message, "result": exc.result})
 
 
+@app.exception_handler(KubernetesException)
+async def kubernetes_exception_handler(request: Request, exc: KubernetesException):
+    return JSONResponse(status_code=200,
+                        content={"code": exc.code, "message": exc.message, "result": exc.result})
+
+
 if __name__ == "__main__":
     server = Server(
         Config(

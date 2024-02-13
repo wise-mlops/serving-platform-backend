@@ -12,13 +12,19 @@ from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequireme
 
 
 class KServeService:
+    def __init__(self, app_env: str, config_path: str):
+        self.app_env = app_env
+        self.config_path = config_path
+
     @staticmethod
     def get_mlflow_client():
         return MlflowClient()
 
-    @staticmethod
-    def get_kserve_client():
-        return KServeClient()
+    def get_kserve_client(self):
+        if self.app_env == "container":
+            return KServeClient()
+        else:
+            return KServeClient(config_file=self.config_path)
 
     @staticmethod
     def get_resource_dict(resource: Optional[Resource] = None):
