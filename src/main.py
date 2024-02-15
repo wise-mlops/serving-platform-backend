@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 from uvicorn import Config, Server
 from loguru import logger
+from starlette.middleware.cors import CORSMiddleware
 
 from src.minio_module import router as minio_router
 from src.minio_module.exceptions import MinIOException
@@ -79,6 +80,19 @@ async def kubernetes_exception_handler(request: Request, exc: KubernetesExceptio
     return JSONResponse(status_code=200,
                         content={"code": exc.code, "message": exc.message, "result": exc.result})
 
+origins = [
+    "*",
+    "http://localhost",
+    "http://localhost:8080",
+    "http://localhost:3000"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
     server = Server(
