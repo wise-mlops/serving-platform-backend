@@ -43,5 +43,5 @@ async def get_inference_service(name: str, namespace: str):
 
 
 @router.get("/{namespace}", response_model=Response)
-async def get_inference_service(namespace: str):
+async def get_inference_service_list(namespace: str):
     return Response.from_result(MODULE_CODE, service.get_inference_service_list(namespace))
