@@ -12,10 +12,6 @@ class Metadata(BaseModel):
     create_date: datetime = None
 
 
-class InferenceMetadata(BaseModel):
-    name: str
-
-
 class Volume(BaseModel):
     name: str
     storage_class: str = 'default-storage-class'

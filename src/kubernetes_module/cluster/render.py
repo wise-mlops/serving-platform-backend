@@ -1,4 +1,4 @@
-from src.kubernetes_module.schemas import Metadata, InferenceMetadata
+from src.kubernetes_module.schemas import Metadata
 
 
 class Render:
@@ -176,10 +176,6 @@ class Render:
         return Render._to_status_list(model, Render.to_service_status)
 
     @staticmethod
-    def to_inference_service_status_list(model):
-        return Render._to_status_list(model, Render.to_inference_service_status)
-
-    @staticmethod
     def to_service_status(item):
         metadata = Render.metadata_of(item)
         return {
@@ -190,20 +186,6 @@ class Render:
             # "ports": [f"{port.port}:{port.node_port}/{port.protocol}" for port in item.spec.ports],
             "create_date": metadata.create_date,
         }
-
-    @staticmethod
-    def to_inference_service_status(item):
-        metadata = Render.metadata_ofs(item)
-        return {
-            "name": metadata.name
-        }
-
-    @staticmethod
-    def metadata_ofs(item):
-        # key-value 형태로 반환
-        return InferenceMetadata(
-            name=item.items.metadata.name
-        )
 
     @staticmethod
     def to_ingress_status_list(model):
