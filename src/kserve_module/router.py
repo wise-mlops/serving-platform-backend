@@ -40,3 +40,8 @@ async def delete_inference_service(name: str, namespace: str):
 @router.get("/{namespace}/{name}", response_model=Response)
 async def get_inference_service(name: str, namespace: str):
     return Response.from_result(MODULE_CODE, service.get_inference_service(name, namespace))
+
+
+@router.get("/{namespace}", response_model=Response)
+async def get_inference_service(namespace: str):
+    return Response.from_result(MODULE_CODE, service.get_inference_service_list(namespace))

@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional, Dict
 
 from kserve import ApiException, V1beta1TransformerSpec, V1beta1LoggerSpec, V1beta1Batcher
@@ -89,7 +90,7 @@ class KServeService:
                             args: Optional[List[str]] = None,
                             ports: Optional[List[Port]] = None,
                             resources: Optional[ResourceRequirements] = None):
-        if image is None and image_pull_policy is None and name is None and command is None\
+        if image is None and image_pull_policy is None and name is None and command is None \
                 and args is None and ports is None and resources is None:
             return None
         return V1Container(image=image,
@@ -331,5 +332,14 @@ class KServeService:
         try:
             self.get_kserve_client().delete(name=name, namespace=namespace)
             return None
+        except ApiException or MlflowException as e:
+            raise KServeApiError(e)
+
+    def get_inference_service_list(self, namespace: str):
+        try:
+            i_svc = self.get_kserve_client().get(namespace=namespace)
+            result = json.loads(json.dumps(i_svc))
+            metadata_names = [item['metadata']['name'] for item in result['items']]
+            return metadata_names
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
