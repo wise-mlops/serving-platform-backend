@@ -1,7 +1,7 @@
 from kubernetes import config
 from src import app_config
 
-MODULE_CODE = 102
+MODULE_CODE = 999
 
 
 def load_cluster_config():
