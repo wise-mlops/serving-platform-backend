@@ -339,7 +339,11 @@ class KServeService:
         try:
             i_svc = self.get_kserve_client().get(namespace=namespace)
             result = json.loads(json.dumps(i_svc))
-            metadata_names = [item['metadata']['name'] for item in result['items']]
-            return metadata_names
+            metadata_dicts = [{'name': names_item['metadata']['name'],
+                               'modelFormat': format_item['spec']['predictor']['model']['modelFormat']['name']} for
+                              names_item, format_item in zip(result['items'], result['items'])]
+
+            return metadata_dicts
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
+
