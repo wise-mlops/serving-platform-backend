@@ -342,8 +342,8 @@ class KServeService:
 
             metadata_dicts = [{'name': item['metadata']['name'],
                                'modelFormat': item['spec']['predictor']['model']['modelFormat']['name'],
-                               'creatTimestamp': item['metadata']['creationTimestamp'],
-                               'Status': next(
+                               'creationTimestamp': item['metadata']['creationTimestamp'],
+                               'status': next(
                                    (cond['status'] for cond in item['status']['conditions'] if cond['type'] == 'Ready'),
                                    None)
                                } for item in result['items']]
