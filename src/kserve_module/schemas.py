@@ -108,7 +108,7 @@ class InferenceServiceSpec(BaseModel):
 
 class InferenceServiceInfo(BaseModel):
     name: str
-    namespace: str
+    namespace: str = 'kubeflow-user-example-com'
     inference_service_spec: InferenceServiceSpec
     sidecar_inject: bool = False
     enable_prometheus_scraping: bool = False

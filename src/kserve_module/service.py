@@ -348,13 +348,17 @@ class KServeService:
                                    None)
                                } for item in result['items']]
 
+            total_items = len(metadata_dicts)
+
             if page is not None:
                 items_per_page = 5
                 start_index = (page - 1) * items_per_page
                 end_index = start_index + items_per_page
                 metadata_dicts = metadata_dicts[start_index:end_index]
 
-            return metadata_dicts
+            return {
+                "items": metadata_dicts,
+                "total_items": total_items,
+            }
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
-
