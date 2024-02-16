@@ -355,7 +355,7 @@ class KServeService:
             total_items = len(metadata_dicts)
 
             if page is not None:
-                items_per_page = 5
+                items_per_page = 10
                 start_index = (page - 1) * items_per_page
                 end_index = start_index + items_per_page
                 metadata_dicts = metadata_dicts[start_index:end_index]
