@@ -335,35 +335,6 @@ class KServeService:
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
 
-    # def get_inference_service_list(self, page: int):
-    #     try:
-    #         i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
-    #         result = json.loads(json.dumps(i_svc))
-    #
-    #         metadata_dicts = [{'name': item['metadata']['name'],
-    #                            'modelFormat': item['spec']['predictor']['model']['modelFormat']['name'],
-    #                            'creationTimestamp': item['metadata']['creationTimestamp'],
-    #                            'status': next(
-    #                                (cond['status'] for cond in item['status']['conditions'] if cond['type'] == 'Ready'),
-    #                                None)
-    #                            } for item in result['items']]
-    #
-    #         total_items = len(metadata_dicts)
-    #
-    #         if page is not None:
-    #             items_per_page = 5
-    #             start_index = (page - 1) * items_per_page
-    #             end_index = start_index + items_per_page
-    #             metadata_dicts = metadata_dicts[start_index:end_index]
-    #
-    #         return {
-    #             "items": metadata_dicts,
-    #             "total_items": total_items,
-    #         }
-    #     except ApiException or MlflowException as e:
-    #         raise KServeApiError(e)
-
-
     def get_inference_service_list(self, page: int, search_query: str):
         try:
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
@@ -377,7 +348,6 @@ class KServeService:
                                    None)
                                } for item in result['items']]
 
-            # 검색어가 제공된 경우, 해당 검색어를 포함하는 InferenceService만 반환
             if search_query:
                 metadata_dicts = [item for item in metadata_dicts if search_query.lower() in item['name'].lower()]
 
