@@ -349,7 +349,8 @@ class KServeService:
                                } for item in result['items']]
 
             if search_query:
-                metadata_dicts = [item for item in metadata_dicts if search_query.lower() in item['name'].lower()]
+                metadata_dicts = [item for item in metadata_dicts if
+                                  any(search_query.lower() in str(value).lower() for value in item.values())]
 
             total_items = len(metadata_dicts)
 
