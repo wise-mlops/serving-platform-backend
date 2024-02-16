@@ -335,8 +335,10 @@ class KServeService:
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
 
-    def get_inference_service_list(self):
+    def get_inference_service_list(self, page: int):
         try:
+            print(page)
+            print(type(page))
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
 
@@ -347,6 +349,12 @@ class KServeService:
                                    (cond['status'] for cond in item['status']['conditions'] if cond['type'] == 'Ready'),
                                    None)
                                } for item in result['items']]
+
+            if page is not None:
+                items_per_page = 5
+                start_index = (page - 1) * items_per_page
+                end_index = start_index + items_per_page
+                metadata_dicts = metadata_dicts[start_index:end_index]
 
             return metadata_dicts
         except ApiException or MlflowException as e:

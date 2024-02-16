@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from typing import Optional
 
 from src.kserve_module import service
 from src.kserve_module.config import MODULE_CODE
@@ -43,5 +44,5 @@ async def get_inference_service(name: str):
 
 
 @router.get("", response_model=Response)
-async def get_inference_service_list():
-    return Response.from_result(MODULE_CODE, service.get_inference_service_list())
+async def get_inference_service_list(page: Optional[int] = None):
+    return Response.from_result(MODULE_CODE, service.get_inference_service_list(page))
