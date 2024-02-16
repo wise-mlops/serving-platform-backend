@@ -301,9 +301,9 @@ class KServeService:
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
 
-    def get_inference_service(self, name: str, namespace: str):
+    def get_inference_service(self, name: str):
         try:
-            i_svc = self.get_kserve_client().get(name=name, namespace=namespace)
+            i_svc = self.get_kserve_client().get(name=name, namespace='kubeflow-user-example-com')
             return i_svc
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
@@ -328,20 +328,25 @@ class KServeService:
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
 
-    def delete_inference_service(self, name: str, namespace: str):
+    def delete_inference_service(self, name: str):
         try:
-            self.get_kserve_client().delete(name=name, namespace=namespace)
+            self.get_kserve_client().delete(name=name, namespace="kubeflow-user-example-com")
             return None
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
 
-    def get_inference_service_list(self, namespace: str):
+    def get_inference_service_list(self):
         try:
-            i_svc = self.get_kserve_client().get(namespace=namespace)
+            i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
-            metadata_dicts = [{'name': names_item['metadata']['name'],
-                               'modelFormat': format_item['spec']['predictor']['model']['modelFormat']['name']} for
-                              names_item, format_item in zip(result['items'], result['items'])]
+
+            metadata_dicts = [{'name': item['metadata']['name'],
+                               'modelFormat': item['spec']['predictor']['model']['modelFormat']['name'],
+                               'creatTimestamp': item['metadata']['creationTimestamp'],
+                               'Status': next(
+                                   (cond['status'] for cond in item['status']['conditions'] if cond['type'] == 'Ready'),
+                                   None)
+                               } for item in result['items']]
 
             return metadata_dicts
         except ApiException or MlflowException as e:

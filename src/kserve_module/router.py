@@ -32,16 +32,16 @@ async def replace_inference_service(inference_service_info: InferenceServiceInfo
                                 service.replace_inference_service(inference_service_info))
 
 
-@router.delete("/{namespace}/{name}", response_model=Response)
-async def delete_inference_service(name: str, namespace: str):
-    return Response.from_result(MODULE_CODE, service.delete_inference_service(name, namespace))
+@router.delete("/{name}", response_model=Response)
+async def delete_inference_service(name: str):
+    return Response.from_result(MODULE_CODE, service.delete_inference_service(name))
 
 
-@router.get("/{namespace}/{name}", response_model=Response)
-async def get_inference_service(name: str, namespace: str):
-    return Response.from_result(MODULE_CODE, service.get_inference_service(name, namespace))
+@router.get("/{name}", response_model=Response)
+async def get_inference_service(name: str):
+    return Response.from_result(MODULE_CODE, service.get_inference_service(name))
 
 
-@router.get("/{namespace}", response_model=Response)
-async def get_inference_service_list(namespace: str):
-    return Response.from_result(MODULE_CODE, service.get_inference_service_list(namespace))
+@router.get("", response_model=Response)
+async def get_inference_service_list():
+    return Response.from_result(MODULE_CODE, service.get_inference_service_list())
