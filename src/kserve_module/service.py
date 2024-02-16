@@ -337,8 +337,6 @@ class KServeService:
 
     def get_inference_service_list(self, page: int):
         try:
-            print(page)
-            print(type(page))
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
 
