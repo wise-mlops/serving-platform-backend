@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from pydantic import BaseModel
@@ -12,5 +13,7 @@ class Response(BaseModel):
 
     @classmethod
     def from_result(cls, module_code, result):
-        return cls(code=int(f"{module_code}{status.HTTP_200_OK}"), result=result)
-
+        if result['code'] != 200:
+            message = "API response failure"
+            return cls(code=int(f"{module_code}{result['code']}"), message=message, result=result['message'])
+        return cls(code=int(f"{module_code}{result['code']}"), result=result['message'])

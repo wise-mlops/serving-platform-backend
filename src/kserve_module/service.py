@@ -7,7 +7,7 @@ from kserve import V1beta1InferenceServiceSpec, V1beta1PredictorSpec, V1beta1Mod
 from kubernetes.client import V1ResourceRequirements, V1Container, V1ContainerPort, V1ObjectMeta, V1EnvVar, V1Toleration
 from mlflow import MlflowException, MlflowClient
 
-from src.kserve_module.exceptions import KServeApiError
+from src.kserve_module.exceptions import KServeApiError, parse_response
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
     InferenceServiceSpec, InferenceServiceInfo, TransformerSpec, Port, Logger, Env, Toleration, Container, Batcher
 
@@ -297,9 +297,16 @@ class KServeService:
             if v1beta1_i_svc is None:
                 return False
             i_svc = self.get_kserve_client().create(v1beta1_i_svc)
-            return i_svc
-        except ApiException or MlflowException as e:
-            raise KServeApiError(e)
+            result = {
+                "code": 200,
+                "message": i_svc
+            }
+            return result
+        # except ApiException or MlflowException as e:
+        except Exception as e:
+            print(e)
+            return parse_response(e.args)
+            # raise KServeApiError(e)
 
     def get_inference_service(self, name: str):
         try:
@@ -331,9 +338,14 @@ class KServeService:
     def delete_inference_service(self, name: str):
         try:
             self.get_kserve_client().delete(name=name, namespace="kubeflow-user-example-com")
-            return None
-        except ApiException or MlflowException as e:
-            raise KServeApiError(e)
+            return {
+                "code": 200,
+                "message": 'success'
+            }
+        # except ApiException or MlflowException as e:
+        except Exception as e:
+            return parse_response(e.args)
+            # raise KServeApiError(e)
 
     def get_inference_service_list(self, page: int, search_query: str):
         try:
@@ -361,9 +373,16 @@ class KServeService:
                 end_index = start_index + items_per_page
                 metadata_dicts = metadata_dicts[start_index:end_index]
 
-            return {
+            message = {
                 "total_items": total_items,
-                "items": metadata_dicts
+                "items": metadata_dicts,
             }
+
+            result = {
+                "message": message,
+                "code": 200
+            }
+
+            return result
         except (ApiException, MlflowException) as e:
             raise KServeApiError(e)

@@ -36,3 +36,18 @@ class KServeApiError(KServeException):
             self.code = int(f"{MODULE_CODE}{e.error_code}")
             self.message = e.message
             self.result = e.json_kwargs
+
+
+def parse_response(response_str):
+    response_str = response_str[0]
+    response_json_str = response_str.split("HTTP response body: ")[-1]
+    response_dict = json.loads(response_json_str)
+
+    code = response_dict.get('code')
+    message = response_dict.get('message')
+
+    # 딕셔너리로 반환
+    return {
+        'code': code,
+        'message': message
+    }
