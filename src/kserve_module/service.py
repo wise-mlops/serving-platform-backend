@@ -311,7 +311,11 @@ class KServeService:
     def get_inference_service(self, name: str):
         try:
             i_svc = self.get_kserve_client().get(name=name, namespace='kubeflow-user-example-com')
-            return i_svc
+            result = {
+                "code": 200,
+                "message": i_svc
+            }
+            return result
         except ApiException or MlflowException as e:
             raise KServeApiError(e)
 
@@ -352,30 +356,30 @@ class KServeService:
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
 
-            metadata_dicts = [{'name': item['metadata']['name'],
-                               'modelFormat': item['spec']['predictor']['model']['modelFormat']['name'],
-                               'creationTimestamp': item['metadata']['creationTimestamp'],
+            metadata_dicts = [{'name': result_detail['metadata']['name'],
+                               'modelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
+                               'creationTimestamp': result_detail['metadata']['creationTimestamp'],
                                'status': next(
-                                   (cond['status'] for cond in item['status'].get('conditions', []) if
+                                   (cond['status'] for cond in result_detail['status'].get('conditions', []) if
                                     cond['type'] == 'Ready'),
                                    'Not Ready')
-                               } for item in result['items']]
+                               } for result_detail in result['result_details']]
 
             if search_query:
-                metadata_dicts = [item for item in metadata_dicts if
-                                  any(search_query.lower() in str(value).lower() for value in item.values())]
+                metadata_dicts = [result_detail for result_detail in metadata_dicts if
+                                  any(search_query.lower() in str(value).lower() for value in result_detail.values())]
 
-            total_items = len(metadata_dicts)
+            total_result_details = len(metadata_dicts)
 
             if page is not None:
-                items_per_page = 10
-                start_index = (page - 1) * items_per_page
-                end_index = start_index + items_per_page
+                result_details_per_page = 10
+                start_index = (page - 1) * result_details_per_page
+                end_index = start_index + result_details_per_page
                 metadata_dicts = metadata_dicts[start_index:end_index]
 
             message = {
-                "total_items": total_items,
-                "items": metadata_dicts,
+                "total_result_details": total_result_details,
+                "result_details": metadata_dicts,
             }
 
             result = {
@@ -386,3 +390,48 @@ class KServeService:
             return result
         except (ApiException, MlflowException) as e:
             raise KServeApiError(e)
+
+    def get_inference_service_parse_detail(self, name: str):
+        try:
+            i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
+            result_detail = json.loads(json.dumps(i_svc_detail))
+
+            detail_metadata_dicts = {
+                'Name': result_detail['metadata']['name'],
+                'OVERVIEW': {
+                    'Status': next(
+                        (cond['status'] for cond in result_detail['status'].get('conditions', []) if
+                         cond['type'] == 'Ready')),
+                    'URL': result_detail['status']['address']['url'],
+                    'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
+                    'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
+                    'InferenceService Conditions': result_detail['status']['conditions'],
+                },
+                'DETAILS': {
+                    'Status': next(
+                        (cond['status'] for cond in result_detail['status'].get('conditions', []) if
+                         cond['type'] == 'Ready')),
+                    'Name': result_detail['metadata']['name'],
+                    'Namespace': result_detail['metadata']['namespace'],
+                    'URL': result_detail['status']['address']['url'],
+                    'Annotations': result_detail['metadata']['annotations'],
+                    'creationTimestamp': result_detail['metadata']['creationTimestamp'],
+                    'Predictor: spec': {
+                        'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
+                        'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
+                        'Service account': result_detail['spec']['predictor']['serviceAccountName']
+                    }
+                },
+
+            }
+
+            result = {
+                "message": detail_metadata_dicts,
+                "code": 200
+            }
+
+            return result
+        # except ApiException or MlflowException as e:
+        #     raise KServeApiError(e)
+        except Exception as e:
+            return parse_response(e.args)

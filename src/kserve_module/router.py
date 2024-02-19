@@ -46,3 +46,8 @@ async def get_inference_service(name: str):
 @router.get("", response_model=Response)
 async def get_inference_service_list(page: Optional[int] = None, search_query: Optional[str] = None):
     return Response.from_result(MODULE_CODE, service.get_inference_service_list(page, search_query))
+
+
+@router.get("/detail/{name}", response_model=Response)
+async def get_inference_service_parse_detail(name: str):
+    return Response.from_result(MODULE_CODE, service.get_inference_service_parse_detail(name))
