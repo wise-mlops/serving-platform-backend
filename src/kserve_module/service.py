@@ -316,8 +316,10 @@ class KServeService:
                 "message": i_svc
             }
             return result
-        except ApiException or MlflowException as e:
-            raise KServeApiError(e)
+        # except ApiException or MlflowException as e:
+        #     raise KServeApiError(e)
+        except Exception as e:
+            return parse_response(e.args)
 
     def patch_inference_service(self, inference_service_info: InferenceServiceInfo):
         try:
