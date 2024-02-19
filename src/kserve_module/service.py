@@ -344,8 +344,9 @@ class KServeService:
                                'modelFormat': item['spec']['predictor']['model']['modelFormat']['name'],
                                'creationTimestamp': item['metadata']['creationTimestamp'],
                                'status': next(
-                                   (cond['status'] for cond in item['status']['conditions'] if cond['type'] == 'Ready'),
-                                   None)
+                                   (cond['status'] for cond in item['status'].get('conditions', []) if
+                                    cond['type'] == 'Ready'),
+                                   'Not Ready')
                                } for item in result['items']]
 
             if search_query:
