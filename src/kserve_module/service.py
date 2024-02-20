@@ -404,7 +404,7 @@ class KServeService:
                     'Status': next(
                         (cond['status'] for cond in result_detail['status'].get('conditions', []) if
                          cond['type'] == 'Ready')),
-                    'URL': result_detail['status']['address']['url'],
+                    'URL': result_detail['status'].get('address', '').get('url', ''),
                     'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
                     'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
                     'InferenceService Conditions': result_detail['status']['conditions'],
@@ -415,8 +415,8 @@ class KServeService:
                          cond['type'] == 'Ready')),
                     'Name': result_detail['metadata']['name'],
                     'Namespace': result_detail['metadata']['namespace'],
-                    'URL': result_detail['status']['address']['url'],
-                    'Annotations': result_detail['metadata']['annotations'],
+                    'URL': result_detail['status']['url'],
+                    'Annotations': result_detail['metadata'].get('annotations', ''),
                     'creationTimestamp': result_detail['metadata']['creationTimestamp'],
                     'Predictor: spec': {
                         'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
@@ -424,7 +424,6 @@ class KServeService:
                         'Service account': result_detail['spec']['predictor']['serviceAccountName']
                     }
                 },
-
             }
 
             result = {
