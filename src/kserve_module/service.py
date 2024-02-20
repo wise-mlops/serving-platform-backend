@@ -421,7 +421,7 @@ class KServeService:
                     'Predictor: spec': {
                         'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
                         'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
-                        'Service account': result_detail['spec']['predictor']['serviceAccountName']
+                        'Service account': result_detail['spec']['predictor'].get('serviceAccountName', '')
                     }
                 },
             }
