@@ -358,14 +358,14 @@ class KServeService:
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
 
-            metadata_dicts = [{'name': result_detail['metadata']['name'],
-                               'modelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
-                               'creationTimestamp': result_detail['metadata']['creationTimestamp'],
+            metadata_dicts = [{'name': item['metadata']['name'],
+                               'modelFormat': item['spec']['predictor']['model']['modelFormat']['name'],
+                               'creationTimestamp': item['metadata']['creationTimestamp'],
                                'status': next(
-                                   (cond['status'] for cond in result_detail['status'].get('conditions', []) if
+                                   (cond['status'] for cond in item['status'].get('conditions', []) if
                                     cond['type'] == 'Ready'),
                                    'Not Ready')
-                               } for result_detail in result['result_details']]
+                               } for item in result['items']]
 
             if search_query:
                 metadata_dicts = [result_detail for result_detail in metadata_dicts if
