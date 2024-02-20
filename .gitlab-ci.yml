@@ -1,6 +1,6 @@
 stages:
   - build
-  - test
+  - tests
   - deploy
 
 #build-job:
@@ -9,14 +9,14 @@ stages:
 #    - pip3 install build wheel
 #    - python3 -m build . --wheel
 
-#unit-test-job:
-#  stage: test
+#unit-tests-job:
+#  stage: tests
 #  script:
 #    - export PYTHONPATH=./app
 #    - poetry run pytest
 
 lint-test-job:
-  stage: test
+  stage: tests
   image: python:3.9-slim
   script:
     - pip3 install build flake8

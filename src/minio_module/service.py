@@ -78,7 +78,7 @@ class MinIOService:
         return minio_response(client.stat_object(bucket_name=bucket_name, object_name=object_name,
                                                  version_id=version_id))
 
-    def remove_object(self, bucket_name: str, version_id:str,
+    def remove_object(self, bucket_name: str, version_id: str,
                       object_name: str):
         client = self.get_client()
         client.remove_object(bucket_name, object_name, version_id=version_id)

@@ -1,12 +1,15 @@
 import json
-from typing import List, Optional, Dict
+from http.client import HTTPException
+from typing import List, Optional, Dict, re
 
+import httpx
 from kserve import ApiException, V1beta1TransformerSpec, V1beta1LoggerSpec, V1beta1Batcher
 from kserve import V1beta1InferenceServiceSpec, V1beta1PredictorSpec, V1beta1ModelSpec, V1beta1ModelFormat, \
     V1beta1InferenceService, constants, KServeClient
 from kubernetes.client import V1ResourceRequirements, V1Container, V1ContainerPort, V1ObjectMeta, V1EnvVar, V1Toleration
 from mlflow import MlflowException, MlflowClient
 
+from src import app_config
 from src.kserve_module.exceptions import KServeApiError, parse_response
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
     InferenceServiceSpec, InferenceServiceInfo, TransformerSpec, Port, Logger, Env, Toleration, Container, Batcher
@@ -391,6 +394,63 @@ class KServeService:
 
             return result
         except (ApiException, MlflowException) as e:
+            raise KServeApiError(e)
+
+    def infer_model(self, name: str, namespace: str, model_format: str, data: list):
+        try:
+
+            ingress_url = app_config.ISTIO_INGRESS_HOST
+            headers = {
+                "Content-Type": "application/json",
+                "Host": f"{name}.{namespace}.svc.cluster.local"
+            }
+
+            if model_format in ["xgboost", "sklearn", "lightgbm", "pmml"]:
+                inference_url = ingress_url + f"/v2/models/{name}/infer"
+                formatted_data = {
+                    "inputs": [
+                        {
+                            "name": "input-0",
+                            "shape": [len(data), len(data[0])],
+                            "datatype": "FP32",
+                            "data": data
+                        }
+                    ]
+                }
+            elif model_format == "pytorch":
+                inference_url = ingress_url + f"/v2/models/{re.search(r'-(.*?)-', name).group(1)}/infer"
+                formatted_data = {
+                    "inputs": [
+                        {
+                            "name": "input-0",
+                            "shape": [len(data), len(data[0])],
+                            "datatype": "FP32",
+                            "data": data
+                        }
+                    ]
+                }
+            elif model_format == "tensorflow":
+                inference_url = ingress_url + f"/v1/models/{name}:predict"
+                formatted_data = {
+                    "instances": [
+                        {
+                            "image_bytes": {
+                                "b64": data
+                            },
+                            "key": "    1"
+                        }
+                    ]
+                }
+            inference_response = httpx.post(inference_url, json=formatted_data, headers=headers)
+            # 요청이 성공적이었는지 확인합니다.
+            if inference_response.status_code == 200:
+                # Kserve 응답을 파싱하고 반환합니다.
+                kserve_result = inference_response.json()
+                return kserve_result
+            else:
+                # Kserve 오류 응답을 해당 상태 코드로 전달합니다.
+                raise HTTPException(status_code=inference_response.status_code, detail=inference_response.text)
+        except ApiException or MlflowException as e:
             raise KServeApiError(e)
 
     def get_inference_service_parse_detail(self, name: str):
