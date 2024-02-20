@@ -415,7 +415,7 @@ class KServeService:
                          cond['type'] == 'Ready')),
                     'Name': result_detail['metadata']['name'],
                     'Namespace': result_detail['metadata']['namespace'],
-                    'URL': result_detail['status']['url'],
+                    'URL': result_detail['status'].get('url', ''),
                     'Annotations': result_detail['metadata'].get('annotations', ''),
                     'creationTimestamp': result_detail['metadata']['creationTimestamp'],
                     'Predictor: spec': {
