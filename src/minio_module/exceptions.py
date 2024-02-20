@@ -26,3 +26,11 @@ class MinIOApiError(MinIOException):
         self.code = int(f"{MODULE_CODE}{status.HTTP_400_BAD_REQUEST}")
         self.message = "minioException"
         self.result = e.args
+
+
+def minio_response(response):
+    result = {
+        "code": 200,
+        "message": response
+    }
+    return result

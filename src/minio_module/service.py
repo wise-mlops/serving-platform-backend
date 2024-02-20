@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import UploadFile
 from minio import Minio
 
+from src.minio_module.exceptions import minio_response
 from src.minio_module.schemas import BucketInfo, ObjectInfo
 
 
@@ -21,32 +22,33 @@ class MinIOService:
 
     def list_buckets(self):
         client = self.get_client()
-        return client.list_buckets()
+        return minio_response(client.list_buckets())
 
     def bucket_exists(self, bucket_name: str):
         client = self.get_client()
-        return client.bucket_exists(bucket_name)
+        return minio_response(client.bucket_exists(bucket_name))
 
     def make_bucket(self, bucket_info: BucketInfo):
         client = self.get_client()
         available = not client.bucket_exists(bucket_info.bucket_name)
         if available:
             client.make_bucket(bucket_info.bucket_name, object_lock=bucket_info.object_lock)
-        return available
+        return minio_response(available)
 
     def remove_bucket(self, bucket_name: str):
         client = self.get_client()
         available = client.bucket_exists(bucket_name)
         if available:
             client.remove_bucket(bucket_name)
-        return available
+        return minio_response(available)
 
     def list_objects(self, bucket_name: str,
                      prefix: Optional[str] = None,
                      recursive: bool = False,
                      start_after: Optional[str] = None):
         client = self.get_client()
-        return [*client.list_objects(bucket_name, prefix=prefix, recursive=recursive, start_after=start_after)]
+        return minio_response([*client.list_objects(bucket_name, prefix=prefix, recursive=recursive,
+                                                    start_after=start_after)])
 
     def put_object(self, bucket_name: str, upload_file: UploadFile, object_name: str):
         client = self.get_client()
@@ -54,7 +56,7 @@ class MinIOService:
             object_name = upload_file.filename
         file_size = os.fstat(upload_file.file.fileno()).st_size
         client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
-        return self._get_object_url(bucket_name, object_name, expire_days=7)
+        return minio_response(self._get_object_url(bucket_name, object_name, expire_days=7))
 
     def fget_object(self, bucket_name: str,
                     object_info: ObjectInfo):
@@ -67,13 +69,13 @@ class MinIOService:
     def fput_object(self, bucket_name: str,
                     object_info: ObjectInfo):
         client = self.get_client()
-        return client.fput_object(bucket_name, object_info.object_name, object_info.file_path)
+        return minio_response(client.fput_object(bucket_name, object_info.object_name, object_info.file_path))
 
-    def stat_object(self, bucket_name: str,
-                    object_info: ObjectInfo):
+    def stat_object(self, bucket_name: str, object_name: str,
+                    version_id: str):
         client = self.get_client()
-        return client.stat_object(bucket_name=bucket_name, object_name=object_info.object_name,
-                                  version_id=object_info.version_id)
+        return minio_response(client.stat_object(bucket_name=bucket_name, object_name=object_name,
+                                                 version_id=version_id))
 
     def remove_object(self, bucket_name: str,
                       object_info: ObjectInfo):

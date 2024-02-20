@@ -1,6 +1,6 @@
 from src import app_config
 
-MODULE_CODE = 104
+MODULE_CODE = 999
 
 
 def get_minio_endpoint():

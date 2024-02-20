@@ -9,28 +9,28 @@ from src.minio_module.schemas import BucketInfo, ObjectInfo
 from src.response import Response
 
 router = APIRouter(
-    prefix="/minio",
+    prefix="/bucket",
     responses={404: {"description": "Not found"}},
     default_response_class=JSONResponse,
 )
 
 
-@router.get("/bucket", tags=["bucket"], response_model=Response)
+@router.get("", tags=["bucket"], response_model=Response)
 async def list_buckets():
     return Response.from_result(MODULE_CODE, service.list_buckets())
 
 
-@router.post("/bucket", tags=["bucket"], response_model=Response)
+@router.post("", tags=["bucket"], response_model=Response)
 async def make_bucket(bucket_info: BucketInfo):
     return Response.from_result(MODULE_CODE, service.make_bucket(bucket_info))
 
 
-@router.get("/bucket/{bucket_name}", tags=["bucket"], response_model=Response)
+@router.get("/{bucket_name}", tags=["bucket"], response_model=Response)
 async def bucket_exists(bucket_name: str):
     return Response.from_result(MODULE_CODE, service.bucket_exists(bucket_name))
 
 
-@router.delete("/bucket/{bucket_name}", tags=["bucket"], response_model=Response)
+@router.delete("/{bucket_name}", tags=["bucket"], response_model=Response)
 async def remove_bucket(bucket_name: str):
     return Response.from_result(MODULE_CODE, service.remove_bucket(bucket_name))
 
@@ -50,10 +50,11 @@ def put_object(bucket_name: str, file: UploadFile, object_name: str = None):
     return Response.from_result(MODULE_CODE, service.put_object(bucket_name, file, object_name))
 
 
-@router.post("/object/{bucket_name}/stat", tags=["object"], response_model=Response)
+@router.get("/object/{bucket_name}/stat", tags=["object"], response_model=Response)
 def stat_object(bucket_name: str,
-                object_info: ObjectInfo):
-    return Response.from_result(MODULE_CODE, service.stat_object(bucket_name, object_info))
+                object_name: str,
+                version_id: Optional[str] = None):
+    return Response.from_result(MODULE_CODE, service.stat_object(bucket_name, object_name, version_id))
 
 
 @router.post("/object/{bucket_name}/download", tags=["object"], response_model=Response)
