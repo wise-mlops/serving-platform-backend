@@ -404,7 +404,8 @@ class KServeService:
                 "Content-Type": "application/json",
                 "Host": f"{name}.{namespace}.svc.cluster.local"
             }
-
+            inference_url = ""
+            formatted_data = {}
             if model_format in ["xgboost", "sklearn", "lightgbm", "pmml"]:
                 inference_url = ingress_url + f"/v2/models/{name}/infer"
                 formatted_data = {
@@ -441,12 +442,18 @@ class KServeService:
                         }
                     ]
                 }
+
             inference_response = httpx.post(inference_url, json=formatted_data, headers=headers)
             # 요청이 성공적이었는지 확인합니다.
             if inference_response.status_code == 200:
                 # Kserve 응답을 파싱하고 반환합니다.
                 kserve_result = inference_response.json()
-                return kserve_result
+                result = {
+                    "code": 200,
+                    "message": kserve_result
+                }
+
+                return result
             else:
                 # Kserve 오류 응답을 해당 상태 코드로 전달합니다.
                 raise HTTPException(status_code=inference_response.status_code, detail=inference_response.text)
