@@ -461,23 +461,27 @@ class KServeService:
             detail_metadata_dicts = {
                 'Name': result_detail['metadata']['name'],
                 'OVERVIEW': {
-                    'Status': next(
-                        (cond['status'] for cond in result_detail['status'].get('conditions', []) if
-                         cond['type'] == 'Ready')),
-                    'URL': result_detail['status'].get('address', '').get('url', ''),
-                    'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
-                    'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
+                    'Info': {
+                        'Status': next(
+                            (cond['status'] for cond in result_detail['status'].get('conditions', []) if
+                             cond['type'] == 'Ready')),
+                        'URL': result_detail['status'].get('address', '').get('url', ''),
+                        'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
+                        'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
+                    },
                     'InferenceService Conditions': result_detail['status']['conditions'],
                 },
                 'DETAILS': {
-                    'Status': next(
-                        (cond['status'] for cond in result_detail['status'].get('conditions', []) if
-                         cond['type'] == 'Ready')),
-                    'Name': result_detail['metadata']['name'],
-                    'Namespace': result_detail['metadata']['namespace'],
-                    'URL': result_detail['status'].get('url', ''),
-                    'Annotations': result_detail['metadata'].get('annotations', ''),
-                    'creationTimestamp': result_detail['metadata']['creationTimestamp'],
+                    'Info': {
+                        'Status': next(
+                            (cond['status'] for cond in result_detail['status'].get('conditions', []) if
+                             cond['type'] == 'Ready')),
+                        'Name': result_detail['metadata']['name'],
+                        'Namespace': result_detail['metadata']['namespace'],
+                        'URL': result_detail['status'].get('url', ''),
+                        'Annotations': result_detail['metadata'].get('annotations', ''),
+                        'creationTimestamp': result_detail['metadata']['creationTimestamp'],
+                    },
                     'Predictor: spec': {
                         'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
                         'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
