@@ -1,6 +1,7 @@
 import json
 from http.client import HTTPException
-from typing import List, Optional, Dict, re
+from typing import List, Optional, Dict
+import re
 
 import httpx
 from kserve import ApiException, V1beta1TransformerSpec, V1beta1LoggerSpec, V1beta1Batcher
