@@ -473,7 +473,7 @@ class KServeService:
                         'Status': next(
                             (cond['status'] for cond in result_detail['status'].get('conditions', []) if
                              cond['type'] == 'Ready')),
-                        'URL': result_detail['status'].get('address', '').get('url', ''),
+                        'URL': result_detail['status'].get('url', ''),
                         'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
                         'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
                     },
