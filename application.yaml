@@ -1,6 +1,6 @@
 local:
   CLUSTER:
-    KUBE_CONFIG_PATH: 'C:/Users/user/Desktop/project/mlops/Kserve-API/cert/config'
+    KUBE_CONFIG_PATH: 'C:/Users/user/Desktop/project/mlops/Kserve-API/cert/config'   # 클러스터 인증서는 받은 뒤 절대 경로 기입
     ISTIO_INGRESS_HOST: ''
     VOLUME_NFS_SERVER: ''
     VOLUME_NFS_PATH: ''
