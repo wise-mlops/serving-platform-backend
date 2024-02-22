@@ -57,22 +57,21 @@ def stat_object(bucket_name: str,
     return Response.from_result(MODULE_CODE, service.stat_object(bucket_name, object_name, version_id))
 
 
-@router.post("/object/{bucket_name}/download", tags=["object"], response_model=Response)
-def fget_object(bucket_name: str,
-                object_info: ObjectInfo):
-    return Response.from_result(MODULE_CODE, service.fget_object(bucket_name, object_info))
+@router.get("/object/{bucket_name}/download", tags=["object"], response_model=Response)
+def fget_object(bucket_name: str, object_name: str, file_path: Optional[str] = None):
+    return Response.from_result(MODULE_CODE, service.fget_object(bucket_name, object_name, file_path))
 
 
 @router.post("/object/{bucket_name}/download/url", tags=["object"], response_model=Response)
-def presigned_get_object(bucket_name: str,
-                         object_info: ObjectInfo):
-    return Response.from_result(MODULE_CODE, service.presigned_get_object(bucket_name, object_info))
+def presigned_get_object(bucket_name: str, object_name: str, expire_days: Optional[str] = None):
+    return Response.from_result(MODULE_CODE, service.presigned_get_object(bucket_name, object_name,
+                                                                          expire_days))
 
 
 @router.post("/object/{bucket_name}/upload", tags=["object"], response_model=Response)
 def fput_object(bucket_name: str,
-                object_info: ObjectInfo):
-    return Response.from_result(MODULE_CODE, service.fput_object(bucket_name, object_info))
+                object_name: str, file_path: str):
+    return Response.from_result(MODULE_CODE, service.fput_object(bucket_name, object_name, file_path))
 
 
 @router.delete("/object/{bucket_name}/delete", tags=["object"], response_model=Response)

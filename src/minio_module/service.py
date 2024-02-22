@@ -59,18 +59,17 @@ class MinIOService:
         return minio_response(self._get_object_url(bucket_name, object_name, expire_days=7))
 
     def fget_object(self, bucket_name: str,
-                    object_info: ObjectInfo):
+                    object_name: str, file_path: str, ):
         client = self.get_client()
-        if object_info.file_path is None:
-            object_info.file_path = object_info.object_name
-        return minio_response(client.fget_object(bucket_name, object_info.object_name, object_info.file_path,
-                                                 version_id=object_info.version_id))
+        if file_path is None:
+            file_path = object_name
+        return minio_response(client.fget_object(bucket_name, object_name, file_path))
 
     def fput_object(self, bucket_name: str,
-                    object_info: ObjectInfo):
+                    object_name: str, file_path: str):
         client = self.get_client()
-        return minio_response(minio_response(client.fput_object(bucket_name, object_info.object_name,
-                                                                object_info.file_path)))
+        return minio_response(minio_response(client.fput_object(bucket_name, object_name,
+                                                                file_path)))
 
     def stat_object(self, bucket_name: str, object_name: str,
                     version_id: str):
@@ -93,8 +92,8 @@ class MinIOService:
         return minio_response(client.presigned_get_object(bucket_name, object_name, expires=expires,
                                                           version_id=object_version_id))
 
-    def presigned_get_object(self, bucket_name: str,
-                             object_info: ObjectInfo):
-        return minio_response(self._get_object_url(bucket_name=bucket_name, object_name=object_info.object_name,
-                                                   expire_days=object_info.expire_days,
-                                                   object_version_id=object_info.version_id))
+    def presigned_get_object(self, bucket_name: str, object_name: str, expire_days: Optional[str] = None,
+                             version_id: Optional[str] = None):
+        return minio_response(self._get_object_url(bucket_name=bucket_name, object_name=object_name,
+                                                   expire_days=expire_days,
+                                                   object_version_id=version_id))
