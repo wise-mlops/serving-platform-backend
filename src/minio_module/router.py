@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from src.minio_module import service
 from src.minio_module.config import MODULE_CODE
-from src.minio_module.schemas import BucketInfo, ObjectInfo
+from src.minio_module.schemas import BucketInfo
 from src.response import Response
 
 router = APIRouter(

@@ -6,7 +6,7 @@ from fastapi import UploadFile
 from minio import Minio
 
 from src.minio_module.exceptions import minio_response
-from src.minio_module.schemas import BucketInfo, ObjectInfo
+from src.minio_module.schemas import BucketInfo
 
 
 class MinIOService:
