@@ -89,7 +89,7 @@ class MinIOService:
         return minio_response(client.presigned_get_object(bucket_name, object_name, expires=expires,
                                                           version_id=object_version_id))
 
-    def presigned_get_object(self, bucket_name: str, object_name: str, expire_days: Optional[str] = None,
+    def presigned_get_object(self, bucket_name: str, object_name: str, expire_days: Optional[int] = None,
                              version_id: Optional[str] = None):
         return minio_response(self._get_object_url(bucket_name=bucket_name, object_name=object_name,
                                                    expire_days=expire_days,
