@@ -473,7 +473,8 @@ class KServeService:
                         'Status': next(
                             (cond['status'] for cond in result_detail['status'].get('conditions', []) if
                              cond['type'] == 'Ready')),
-                        'URL': result_detail['status'].get('url', ''),
+                        'URL': result_detail['status'].get('url', 'InferenceService is not ready to receive traffic '
+                                                                  'yet.'),
                         'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
                         'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
                     },
@@ -486,14 +487,18 @@ class KServeService:
                              cond['type'] == 'Ready')),
                         'Name': result_detail['metadata']['name'],
                         'Namespace': result_detail['metadata']['namespace'],
-                        'URL': result_detail['status'].get('url', ''),
-                        'Annotations': result_detail['metadata'].get('annotations', ''),
+                        'URL': result_detail['status'].get('url', 'InferenceService is not ready to receive traffic '
+                                                                  'yet.'),
+                        'Annotations': result_detail['metadata'].get('annotations', 'InferenceService is not ready to '
+                                                                                    'receive traffic yet.'),
                         'creationTimestamp': result_detail['metadata']['creationTimestamp'],
                     },
                     'Predictor: spec': {
                         'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
                         'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
-                        'Service account': result_detail['spec']['predictor'].get('serviceAccountName', '')
+                        'Service account': result_detail['spec']['predictor'].get('serviceAccountName',
+                                                                                  'InferenceService is not ready to '
+                                                                                  'receive traffic yet.')
                     }
                 },
             }
