@@ -62,7 +62,7 @@ def fget_object(bucket_name: str, object_name: str, file_path: Optional[str] = N
 
 
 @router.post("/object/{bucket_name}/download/url", tags=["object"], response_model=Response)
-def presigned_get_object(bucket_name: str, object_name: str, expire_days: Optional[str] = None):
+def presigned_get_object(bucket_name: str, object_name: str, expire_days: Optional[int] = None):
     return Response.from_result(MODULE_CODE, service.presigned_get_object(bucket_name, object_name,
                                                                           expire_days))
 
