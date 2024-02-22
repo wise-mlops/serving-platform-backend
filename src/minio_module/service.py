@@ -71,16 +71,13 @@ class MinIOService:
         return minio_response(minio_response(client.fput_object(bucket_name, object_name,
                                                                 file_path)))
 
-    def stat_object(self, bucket_name: str, object_name: str,
-                    version_id: str):
+    def stat_object(self, bucket_name: str, object_name: str):
         client = self.get_client()
-        return minio_response(client.stat_object(bucket_name=bucket_name, object_name=object_name,
-                                                 version_id=version_id))
+        return minio_response(client.stat_object(bucket_name=bucket_name, object_name=object_name))
 
-    def remove_object(self, bucket_name: str, version_id: str,
-                      object_name: str):
+    def remove_object(self, bucket_name: str,object_name: str):
         client = self.get_client()
-        client.remove_object(bucket_name, object_name, version_id=version_id)
+        client.remove_object(bucket_name, object_name)
         return minio_response("success")
 
     def _get_object_url(self, bucket_name: str, object_name: str, expire_days: int = 7, object_version_id: str = None):

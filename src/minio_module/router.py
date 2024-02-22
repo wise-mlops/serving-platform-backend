@@ -52,9 +52,8 @@ def put_object(bucket_name: str, file: UploadFile, object_name: str = None):
 
 @router.get("/object/{bucket_name}/stat", tags=["object"], response_model=Response)
 def stat_object(bucket_name: str,
-                object_name: str,
-                version_id: Optional[str] = None):
-    return Response.from_result(MODULE_CODE, service.stat_object(bucket_name, object_name, version_id))
+                object_name: str):
+    return Response.from_result(MODULE_CODE, service.stat_object(bucket_name, object_name))
 
 
 @router.get("/object/{bucket_name}/download", tags=["object"], response_model=Response)
@@ -76,6 +75,5 @@ def fput_object(bucket_name: str,
 
 @router.delete("/object/{bucket_name}/delete", tags=["object"], response_model=Response)
 def remove_object(bucket_name: str,
-                  object_name: str,
-                  version_id: Optional[str] = None):
-    return Response.from_result(MODULE_CODE, service.remove_object(bucket_name, object_name, version_id))
+                  object_name: str):
+    return Response.from_result(MODULE_CODE, service.remove_object(bucket_name, object_name))
