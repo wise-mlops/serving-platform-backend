@@ -455,13 +455,14 @@ class KServeService:
                     "code": 200,
                     "message": kserve_result
                 }
-
                 return result
             else:
-                # Kserve 오류 응답을 해당 상태 코드로 전달합니다.
-                raise HTTPException(status_code=inference_response.status_code, detail=inference_response.text)
-        except ApiException or MlflowException as e:
-            raise KServeApiError(e)
+                return {
+                    "code": 400,
+                    "message": inference_response.json()
+                }
+        except Exception as e:
+            return parse_response(e.args)
 
     def get_inference_service_parse_detail(self, name: str):
         try:
