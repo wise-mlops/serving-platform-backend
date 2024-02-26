@@ -2,14 +2,12 @@ import json
 from http.client import HTTPException
 from typing import List, Optional, Dict
 import re
-
-import httpx
+import requests
 from kserve import ApiException, V1beta1TransformerSpec, V1beta1LoggerSpec, V1beta1Batcher
 from kserve import V1beta1InferenceServiceSpec, V1beta1PredictorSpec, V1beta1ModelSpec, V1beta1ModelFormat, \
     V1beta1InferenceService, constants, KServeClient
 from kubernetes.client import V1ResourceRequirements, V1Container, V1ContainerPort, V1ObjectMeta, V1EnvVar, V1Toleration
 from mlflow import MlflowException, MlflowClient
-
 from src import app_config
 from src.kserve_module.exceptions import KServeApiError, parse_response
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
@@ -416,7 +414,7 @@ class KServeService:
                 formatted_data = {
                     "inputs": [
                         {
-                            "name": "input-0",
+                            "name": name,
                             "shape": [len(data), len(data[0])],
                             "datatype": "FP32",
                             "data": data
@@ -428,7 +426,7 @@ class KServeService:
                 formatted_data = {
                     "inputs": [
                         {
-                            "name": "input-0",
+                            "name": name,
                             "shape": [len(data), len(data[0])],
                             "datatype": "FP32",
                             "data": data
@@ -448,7 +446,7 @@ class KServeService:
                     ]
                 }
 
-            inference_response = httpx.post(inference_url, json=formatted_data, headers=headers)
+            inference_response = requests.post(inference_url, json=formatted_data, headers=headers)
             # 요청이 성공적이었는지 확인합니다.
             if inference_response.status_code == 200:
                 # Kserve 응답을 파싱하고 반환합니다.
