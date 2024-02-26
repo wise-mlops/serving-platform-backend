@@ -61,5 +61,5 @@ async def get_inference_service_parse_detail(name: str):
 
 
 @router.get("/stat/{name}", response_model=Response)
-async def get_inference_service_parse_detail(name: str):
+async def get_inference_service_stat(name: str):
     return Response.from_result(MODULE_CODE, service.get_inference_service_stat(name))
