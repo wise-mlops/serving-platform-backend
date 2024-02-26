@@ -357,7 +357,7 @@ class KServeService:
             return parse_response(e.args)
             # raise KServeApiError(e)
 
-    def get_inference_service_list(self, page: int, search_query: str):
+    def get_inference_service_list(self, page: int, search_query: str, col_query: str):
         try:
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
@@ -374,6 +374,10 @@ class KServeService:
             if search_query:
                 metadata_dicts = [result_detail for result_detail in metadata_dicts if
                                   any(search_query.lower() in str(value).lower() for value in result_detail.values())]
+
+                if col_query:
+                    metadata_dicts = [item for item in metadata_dicts if search_query.lower()
+                                      in item[col_query].lower()]
 
             total_result_details = len(metadata_dicts)
 
