@@ -1,5 +1,4 @@
 import json
-from http.client import HTTPException
 from typing import List, Optional, Dict
 import re
 import requests
