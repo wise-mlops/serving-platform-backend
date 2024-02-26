@@ -517,3 +517,21 @@ class KServeService:
         #     raise KServeApiError(e)
         except Exception as e:
             return parse_response(e.args)
+
+    def get_inference_service_stat(self, name: str):
+        try:
+            i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
+            result_detail = json.loads(json.dumps(i_svc_detail))
+
+            detail_metadata_dicts = next(
+                (cond['status'] for cond in result_detail['status'].get('conditions', []) if
+                 cond['type'] == 'Ready'))
+
+            result = {
+                "message": detail_metadata_dicts,
+                "code": 200
+            }
+
+            return result
+        except Exception as e:
+            return parse_response(e.args)

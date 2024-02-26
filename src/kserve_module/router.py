@@ -58,3 +58,8 @@ async def infer_model(name: str, namespace: str, model_format: str, data: list):
 @router.get("/detail/{name}", response_model=Response)
 async def get_inference_service_parse_detail(name: str):
     return Response.from_result(MODULE_CODE, service.get_inference_service_parse_detail(name))
+
+
+@router.get("/stat/{name}", response_model=Response)
+async def get_inference_service_parse_detail(name: str):
+    return Response.from_result(MODULE_CODE, service.get_inference_service_stat(name))
