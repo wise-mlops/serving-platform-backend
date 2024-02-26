@@ -1,12 +1,19 @@
 import os
+import json
 from datetime import timedelta
 from typing import Optional
 
 from fastapi import UploadFile
 from minio import Minio
 
+from src import app_config
+from src.kserve_module.schemas import InferenceServiceInfo
 from src.minio_module.exceptions import minio_response
 from src.minio_module.schemas import BucketInfo
+from src.kserve_module.service import KServeService
+
+my_service = KServeService(app_env=app_config.APP_ENV,
+                           config_path=app_config.CLUSTER_KUBE_CONFIG_PATH)
 
 
 class MinIOService:
@@ -94,3 +101,31 @@ class MinIOService:
         return minio_response(self._get_object_url(bucket_name=bucket_name, object_name=object_name,
                                                    expire_days=expire_days,
                                                    object_version_id=version_id))
+
+    def put_object_serving(self, bucket_name: str, model_format: str, upload_file: UploadFile, service_name: str):
+        client = self.get_client()
+        file_size = os.fstat(upload_file.file.fileno()).st_size
+        client.put_object(bucket_name, object_name=upload_file.filename, data=upload_file.file, length=file_size)
+        create_inference_service = '''
+{
+  "name": "{{service_name}}",
+  "namespace": "kubeflow-user-example-com",
+  "inference_service_spec": {
+    "predictor": {
+      "model_spec": {
+        "storage_uri": "s3://{{bucket_name}}/{{upload_file.filename}}",
+        "model_format": {
+          "name": "{{model_format}}"
+        }
+      },
+      "service_account_name": "kserve-sa"
+    }
+  },
+  "sidecar_inject": false
+}
+'''
+        serving_text = create_inference_service.replace("{{service_name}}", service_name)
+        serving_text = serving_text.replace("{{bucket_name}}", bucket_name)
+        serving_text = serving_text.replace("{{model_format}}", model_format)
+        serving_text = serving_text.replace("{{upload_file.filename}}", upload_file.filename)
+        return my_service.create_inference_service(InferenceServiceInfo(**json.loads(serving_text)))

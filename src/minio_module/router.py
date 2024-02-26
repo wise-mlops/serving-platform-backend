@@ -77,3 +77,8 @@ def fput_object(bucket_name: str,
 def remove_object(bucket_name: str,
                   object_name: str):
     return Response.from_result(MODULE_CODE, service.remove_object(bucket_name, object_name))
+
+
+@router.post("/object/serving/{bucket_name}", tags=["object"], response_model=Response)
+def put_object_serving(bucket_name: str, model_format: str, file: UploadFile, service_name: str):
+    return Response.from_result(MODULE_CODE, service.put_object_serving(bucket_name, model_format, file, service_name))
