@@ -1,5 +1,8 @@
 import os
 import json
+import io
+import zipfile
+from tempfile import TemporaryDirectory
 from datetime import timedelta
 from typing import Optional
 
@@ -105,7 +108,19 @@ class MinIOService:
     def put_object_serving(self, bucket_name: str, model_format: str, upload_file: UploadFile, service_name: str):
         client = self.get_client()
         file_size = os.fstat(upload_file.file.fileno()).st_size
-        client.put_object(bucket_name, object_name=upload_file.filename, data=upload_file.file, length=file_size)
+        if upload_file.filename.endswith('.zip'):
+            with TemporaryDirectory() as tmp_dir:
+                zip_path = os.path.join(tmp_dir, upload_file.filename)
+                with open(zip_path, 'wb') as tmp_file:
+                    tmp_file.write(upload_file.file.read())
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    for filename in zip_ref.namelist():
+                        with zip_ref.open(filename) as extracted_file:
+                            data = extracted_file.read()
+                            client.put_object(bucket_name, object_name=filename, data=io.BytesIO(data),
+                                              length=len(data))
+        else:
+            client.put_object(bucket_name, object_name=upload_file.filename, data=upload_file.file, length=file_size)
         create_inference_service = '''
 {
   "name": "{{service_name}}",
@@ -114,6 +129,7 @@ class MinIOService:
     "predictor": {
       "model_spec": {
         "storage_uri": "s3://{{bucket_name}}/{{upload_file.filename}}",
+        "protocolVersion": "v2",
         "model_format": {
           "name": "{{model_format}}"
         }
@@ -127,5 +143,7 @@ class MinIOService:
         serving_text = create_inference_service.replace("{{service_name}}", service_name)
         serving_text = serving_text.replace("{{bucket_name}}", bucket_name)
         serving_text = serving_text.replace("{{model_format}}", model_format)
-        serving_text = serving_text.replace("{{upload_file.filename}}", upload_file.filename)
+        filename_to_use = os.path.splitext(upload_file.filename)[0] if upload_file.filename.endswith(
+            '.zip') else upload_file.filename
+        serving_text = serving_text.replace("{{upload_file.filename}}", filename_to_use)
         return my_service.create_inference_service(InferenceServiceInfo(**json.loads(serving_text)))
