@@ -444,6 +444,19 @@ class KServeService:
                         }
                     ]
                 }
+            elif model_format == "T5":
+                inference_url = ingress_url + f"/v1/models/{name}:predict"
+                formatted_data = {
+                    "instances": [
+                        {
+                            "body": {
+                                "model": "t5-small-fid",
+                                "mode": "",
+                                "messages": data
+                            },
+                        }
+                    ]
+                }
 
             inference_response = requests.post(inference_url, json=formatted_data, headers=headers)
             # 요청이 성공적이었는지 확인합니다.
@@ -451,13 +464,13 @@ class KServeService:
                 # Kserve 응답을 파싱하고 반환합니다.
                 kserve_result = inference_response.json()
                 result = {
-                    "code": 200,
+                    "code": inference_response.status_code,
                     "message": kserve_result
                 }
                 return result
             else:
                 return {
-                    "code": 400,
+                    "code": inference_response.status_code,
                     "message": inference_response.json()
                 }
         except Exception as e:
@@ -523,7 +536,7 @@ class KServeService:
 
             detail_metadata_dicts = next(
                 (cond['status'] for cond in result_detail['status'].get('conditions', []) if
-                 cond['type'] == 'Ready'))
+                 cond['type'] == 'Ready'), 'False')
 
             result = {
                 "message": detail_metadata_dicts,
