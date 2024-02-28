@@ -406,9 +406,11 @@ class KServeService:
                 "Content-Type": "application/json",
                 "Host": f"{name}.{namespace}.svc.cluster.local"
             }
+            protocol_version = "v1"
             inference_url = ""
             formatted_data = {}
             if model_format in ["xgboost", "sklearn", "lightgbm", "pmml"]:
+                protocol_version = "v2"
                 inference_url = ingress_url + f"/v2/models/{name}/infer"
                 formatted_data = {
                     "inputs": [
@@ -421,6 +423,7 @@ class KServeService:
                     ]
                 }
             elif model_format == "pytorch":
+                protocol_version = "v2"
                 inference_url = ingress_url + f"/v2/models/{re.search(r'-(.*?)-', name).group(1)}/infer"
                 formatted_data = {
                     "inputs": [
@@ -433,6 +436,7 @@ class KServeService:
                     ]
                 }
             elif model_format == "tensorflow":
+                protocol_version = "v1"
                 inference_url = ingress_url + f"/v1/models/{name}:predict"
                 formatted_data = {
                     "instances": [
@@ -445,6 +449,7 @@ class KServeService:
                     ]
                 }
             elif model_format == "T5":
+                protocol_version = "v1"
                 inference_url = ingress_url + f"/v1/models/{name}:predict"
                 formatted_data = {
                     "instances": [
@@ -462,8 +467,9 @@ class KServeService:
             kserve_result = inference_response.json()
 
             # TODO 다른 output 구조의 모델일 경우 계속 json 형식으로 바꿔주는 작업을 안하도록 코드 수정
-            if model_format == "T5":
-                kserve_result = json.loads(kserve_result['predictions'][0])
+            if protocol_version == "v1":
+                kserve_result = kserve_result['predictions']
+
             result = {
                 "code": inference_response.status_code,
                 "message": kserve_result
