@@ -62,6 +62,8 @@ class MinIOService:
 
     def put_object(self, bucket_name: str, upload_file: UploadFile, object_name: str):
         client = self.get_client()
+        if client.get_object(bucket_name=bucket_name, object_name=upload_file.filename).status == 200:
+            return minio_response('False')
         if object_name is None:
             object_name = upload_file.filename
         file_size = os.fstat(upload_file.file.fileno()).st_size
@@ -78,8 +80,8 @@ class MinIOService:
     def fput_object(self, bucket_name: str,
                     object_name: str, file_path: str):
         client = self.get_client()
-        return minio_response(minio_response(client.fput_object(bucket_name, object_name,
-                                                                file_path)))
+        return minio_response(client.fput_object(bucket_name, object_name,
+                                                 file_path))
 
     def stat_object(self, bucket_name: str, object_name: str):
         client = self.get_client()
@@ -105,7 +107,8 @@ class MinIOService:
                                                    expire_days=expire_days,
                                                    object_version_id=version_id))
 
-    def put_object_serving(self, bucket_name: str, model_format: str, upload_file: UploadFile, service_name: str):
+    def put_object_serving(self, bucket_name: str, model_format: str, upload_file: UploadFile,
+                           service_name: str):
         client = self.get_client()
         file_size = os.fstat(upload_file.file.fileno()).st_size
         if upload_file.filename.endswith('.zip'):
@@ -120,7 +123,9 @@ class MinIOService:
                             client.put_object(bucket_name, object_name=filename, data=io.BytesIO(data),
                                               length=len(data))
         else:
-            client.put_object(bucket_name, object_name=upload_file.filename, data=upload_file.file, length=file_size)
+            object_name = f'{service_name}/{upload_file.filename}'
+            client.put_object(bucket_name, object_name=object_name, data=upload_file.file,
+                              length=file_size)
         create_inference_service = '''
 {
   "name": "{{service_name}}",
@@ -128,7 +133,7 @@ class MinIOService:
   "inference_service_spec": {
     "predictor": {
       "model_spec": {
-        "storage_uri": "s3://{{bucket_name}}/{{upload_file.filename}}",
+        "storage_uri": "s3://{{bucket_name}}/{{service_name}}",
         "protocolVersion": "v2",
         "model_format": {
           "name": "{{model_format}}"
@@ -140,10 +145,11 @@ class MinIOService:
   "sidecar_inject": false
 }
 '''
-        serving_text = create_inference_service.replace("{{service_name}}", service_name)
+        serving_text = create_inference_service.replace("{{model_format}}", model_format)
+        if upload_file.filename.endswith('.zip'):
+            filename_to_use = os.path.splitext(upload_file.filename)[0] if upload_file.filename.endswith(
+                '.zip') else upload_file.filename
+            serving_text = serving_text.replace("/{{service_name}}", '/'+filename_to_use)
         serving_text = serving_text.replace("{{bucket_name}}", bucket_name)
-        serving_text = serving_text.replace("{{model_format}}", model_format)
-        filename_to_use = os.path.splitext(upload_file.filename)[0] if upload_file.filename.endswith(
-            '.zip') else upload_file.filename
-        serving_text = serving_text.replace("{{upload_file.filename}}", filename_to_use)
+        serving_text = serving_text.replace("{{service_name}}", service_name)
         return my_service.create_inference_service(InferenceServiceInfo(**json.loads(serving_text)))
