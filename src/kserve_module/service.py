@@ -459,22 +459,17 @@ class KServeService:
                 }
 
             inference_response = requests.post(inference_url, json=formatted_data, headers=headers)
-            # 요청이 성공적이었는지 확인합니다.
-            if inference_response.status_code == 200:
-                # Kserve 응답을 파싱하고 반환합니다.
-                kserve_result = inference_response.json()
-                if model_format == "T5":
-                    kserve_result = json.loads(kserve_result['predictions'][0])
-                result = {
-                    "code": inference_response.status_code,
-                    "message": kserve_result
-                }
-                return result
-            else:
-                return {
-                    "code": inference_response.status_code,
-                    "message": inference_response.json()
-                }
+            kserve_result = inference_response.json()
+
+            # TODO 다른 output 구조의 모델일 경우 계속 json 형식으로 바꿔주는 작업을 안하도록 코드 수정
+            if model_format == "T5":
+                kserve_result = json.loads(kserve_result['predictions'][0])
+            result = {
+                "code": inference_response.status_code,
+                "message": kserve_result
+            }
+            return result
+
         except Exception as e:
             return parse_response(e.args)
 
