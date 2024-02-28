@@ -32,6 +32,7 @@ class MinIOService:
 
     def list_buckets(self):
         client = self.get_client()
+        print(client.list_buckets())
         return minio_response(client.list_buckets())
 
     def bucket_exists(self, bucket_name: str):
@@ -149,7 +150,7 @@ class MinIOService:
         if upload_file.filename.endswith('.zip'):
             filename_to_use = os.path.splitext(upload_file.filename)[0] if upload_file.filename.endswith(
                 '.zip') else upload_file.filename
-            serving_text = serving_text.replace("/{{service_name}}", '/'+filename_to_use)
+            serving_text = serving_text.replace("/{{service_name}}", '/' + filename_to_use)
         serving_text = serving_text.replace("{{bucket_name}}", bucket_name)
         serving_text = serving_text.replace("{{service_name}}", service_name)
         return my_service.create_inference_service(InferenceServiceInfo(**json.loads(serving_text)))
