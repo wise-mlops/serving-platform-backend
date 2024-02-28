@@ -463,6 +463,8 @@ class KServeService:
             if inference_response.status_code == 200:
                 # Kserve 응답을 파싱하고 반환합니다.
                 kserve_result = inference_response.json()
+                if model_format == "T5":
+                    kserve_result = json.loads(kserve_result['predictions'][0])
                 result = {
                     "code": inference_response.status_code,
                     "message": kserve_result
