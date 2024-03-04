@@ -12,7 +12,7 @@ from minio import Minio
 from src import app_config
 from src.kserve_module.schemas import InferenceServiceInfo
 from src.minio_module.exceptions import minio_response
-from src.minio_module.schemas import BucketInfo
+from src.minio_module.schemas import BucketInfo, convert_datetime_to_str
 from src.kserve_module.service import KServeService
 
 my_service = KServeService(app_env=app_config.APP_ENV,
@@ -35,9 +35,13 @@ class MinIOService:
         client = self.get_client()
         metadata_dicts = client.list_buckets()
         bucket_list = [obj.__dict__ for obj in metadata_dicts]
+        if col_query == "_creation_date":
+            for item in bucket_list:
+                item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
 
         if search_query:
             bucket_list = [bucket for bucket in bucket_list if search_query.lower() in str(bucket).lower()]
+
             if col_query:
                 bucket_list = [item for item in bucket_list if search_query.lower()
                                in str(item[col_query]).lower()]
@@ -87,6 +91,10 @@ class MinIOService:
         client = self.get_client()
         object_list = [*client.list_objects(bucket_name, prefix=prefix, recursive=recursive)]
         object_list = [obj.__dict__ for obj in object_list]
+
+        if col_query == "_last_modified":
+            for item in object_list:
+                item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
 
         if search_query:
             object_list = [item for item in object_list if search_query.lower() in str(item).lower()]
