@@ -7,7 +7,7 @@ from datetime import timedelta
 from typing import Optional
 
 from fastapi import UploadFile
-from minio import Minio
+from minio import Minio, S3Error
 
 from src import app_config
 from src.kserve_module.schemas import InferenceServiceInfo
@@ -69,18 +69,30 @@ class MinIOService:
         return minio_response(client.bucket_exists(bucket_name))
 
     def make_bucket(self, bucket_info: BucketInfo):
-        client = self.get_client()
-        available = not client.bucket_exists(bucket_info.bucket_name)
-        if available:
-            client.make_bucket(bucket_info.bucket_name, object_lock=bucket_info.object_lock)
-        return minio_response(available)
+        try:
+            client = self.get_client()
+            available = not client.bucket_exists(bucket_info.bucket_name)
+            if available:
+                client.make_bucket(bucket_info.bucket_name, object_lock=bucket_info.object_lock)
+            elif not available:
+                available = {
+                    "status": available,
+                    "message": "It already"
+                }
+                return minio_response(available, 409)
+            return minio_response(available)
+        except Exception as e:
+            return minio_response(e.args, 400)
 
     def remove_bucket(self, bucket_name: str):
-        client = self.get_client()
-        available = client.bucket_exists(bucket_name)
-        if available:
-            client.remove_bucket(bucket_name)
-        return minio_response(available)
+        try:
+            client = self.get_client()
+            available = client.bucket_exists(bucket_name)
+            if available:
+                client.remove_bucket(bucket_name)
+            return minio_response(available)
+        except S3Error as e:
+            return minio_response(e.message, 400)
 
     def list_objects(self, bucket_name: str,
                      prefix: Optional[str] = None,
@@ -124,8 +136,9 @@ class MinIOService:
 
     def put_object(self, bucket_name: str, upload_file: UploadFile, object_name: str):
         client = self.get_client()
-        if client.get_object(bucket_name=bucket_name, object_name=upload_file.filename).status == 200:
-            return minio_response('False')
+        # if client.get_object(bucket_name=bucket_name, object_name=upload_file.filename).status == 200:
+        #     return minio_response('False')
+
         if object_name is None:
             object_name = upload_file.filename
         file_size = os.fstat(upload_file.file.fileno()).st_size

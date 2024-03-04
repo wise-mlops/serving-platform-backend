@@ -75,7 +75,7 @@ def fput_object(bucket_name: str,
     return Response.from_result(MODULE_CODE, service.fput_object(bucket_name, object_name, file_path))
 
 
-@router.delete("/object/{bucket_name}/delete", tags=["object"], response_model=Response)
+@router.delete("/object/{bucket_name}", tags=["object"], response_model=Response)
 def remove_object(bucket_name: str,
                   object_name: str):
     return Response.from_result(MODULE_CODE, service.remove_object(bucket_name, object_name))

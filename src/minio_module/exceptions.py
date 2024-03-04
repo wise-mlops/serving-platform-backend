@@ -28,9 +28,9 @@ class MinIOApiError(MinIOException):
         self.result = e.args
 
 
-def minio_response(response):
+def minio_response(response, code=200):
     result = {
-        "code": 200,
+        "code": code,
         "message": response
     }
     return result
