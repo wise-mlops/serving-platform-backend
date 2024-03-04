@@ -136,14 +136,18 @@ class MinIOService:
 
     def put_object(self, bucket_name: str, upload_file: UploadFile, object_name: str):
         client = self.get_client()
-        # if client.get_object(bucket_name=bucket_name, object_name=upload_file.filename).status == 200:
-        #     return minio_response('False')
-
+        stat = 0
         if object_name is None:
             object_name = upload_file.filename
-        file_size = os.fstat(upload_file.file.fileno()).st_size
-        client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
-        return minio_response(self._get_object_url(bucket_name, object_name, expire_days=7))
+
+        try:
+            stat = client.get_object(bucket_name, object_name).status
+        finally:
+            if stat == 200:
+                return minio_response("Object Already", code=409)
+            file_size = os.fstat(upload_file.file.fileno()).st_size
+            client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
+            return minio_response(self._get_object_url(bucket_name, object_name, expire_days=7))
 
     def fget_object(self, bucket_name: str,
                     object_name: str, file_path: str, ):
@@ -164,7 +168,10 @@ class MinIOService:
 
     def remove_object(self, bucket_name: str, object_name: str):
         client = self.get_client()
-        client.remove_object(bucket_name, object_name)
+        objects = client.list_objects(bucket_name, prefix=object_name, recursive=True)
+        for obj in objects:
+            client.remove_object(bucket_name, obj.object_name)
+        client.remove_object(bucket_name, object_name + '/')
         return minio_response("success")
 
     def _get_object_url(self, bucket_name: str, object_name: str, expire_days: int = 7, object_version_id: str = None):
