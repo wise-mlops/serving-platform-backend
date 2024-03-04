@@ -16,8 +16,8 @@ router = APIRouter(
 
 
 @router.get("", tags=["bucket"], response_model=Response)
-async def list_buckets():
-    return Response.from_result(MODULE_CODE, service.list_buckets())
+async def list_buckets(page: Optional[int] = None, search_query: Optional[str] = None):
+    return Response.from_result(MODULE_CODE, service.list_buckets(page, search_query))
 
 
 @router.post("", tags=["bucket"], response_model=Response)
@@ -39,10 +39,11 @@ async def remove_bucket(bucket_name: str):
 async def list_objects(bucket_name: str,
                        prefix: Optional[str] = None,
                        recursive: bool = False,
-                       start_after: Optional[str] = None):
+                       search_query: Optional[str] = None,
+                       col_query: Optional[str] = None):
     return Response.from_result(MODULE_CODE,
                                 service.list_objects(bucket_name, prefix=prefix, recursive=recursive,
-                                                     start_after=start_after))
+                                                     search_query=search_query, col_query=col_query))
 
 
 @router.post("/object/{bucket_name}", tags=["object"], response_model=Response)
