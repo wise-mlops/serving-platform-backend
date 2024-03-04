@@ -30,24 +30,29 @@ class MinIOService:
     def get_client(self):
         return Minio(endpoint=self.endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=self.secure)
 
-    def list_buckets(self, page: Optional[int] = None, search_query: Optional[str] = None):
+    def list_buckets(self, page: Optional[int] = None, search_query: Optional[str] = None,
+                     col_query: Optional[str] = None):
         client = self.get_client()
-
         metadata_dicts = client.list_buckets()
-        if search_query:
-            metadata_dicts = [bucket for bucket in metadata_dicts if search_query.lower() in str(bucket).lower()]
+        bucket_list = [obj.__dict__ for obj in metadata_dicts]
 
-        total_bucket = len(metadata_dicts)
+        if search_query:
+            bucket_list = [bucket for bucket in bucket_list if search_query.lower() in str(bucket).lower()]
+            if col_query:
+                bucket_list = [item for item in bucket_list if search_query.lower()
+                               in str(item[col_query]).lower()]
+
+        total_bucket = len(bucket_list)
 
         if page is not None:
             result_details_per_page = 10
             start_index = (page - 1) * result_details_per_page
             end_index = start_index + result_details_per_page
-            metadata_dicts = metadata_dicts[start_index:end_index]
+            bucket_list = bucket_list[start_index:end_index]
 
         message = {
             "total_result_details": total_bucket,
-            "result_details": metadata_dicts,
+            "result_details": bucket_list,
         }
 
         result = {
@@ -76,6 +81,7 @@ class MinIOService:
     def list_objects(self, bucket_name: str,
                      prefix: Optional[str] = None,
                      recursive: bool = False,
+                     page: Optional[int] = None,
                      search_query: Optional[str] = None,
                      col_query: Optional[str] = None):
         client = self.get_client()
@@ -89,7 +95,24 @@ class MinIOService:
                 object_list = [item for item in object_list if search_query.lower()
                                in str(item[col_query]).lower()]
 
-        return minio_response(object_list)
+        total_bucket = len(object_list)
+
+        if page is not None:
+            result_details_per_page = 10
+            start_index = (page - 1) * result_details_per_page
+            end_index = start_index + result_details_per_page
+            object_list = object_list[start_index:end_index]
+
+        message = {
+            "total_result_details": total_bucket,
+            "result_details": object_list,
+        }
+
+        result = {
+            "message": message
+        }
+
+        return minio_response(result)
 
     def put_object(self, bucket_name: str, upload_file: UploadFile, object_name: str):
         client = self.get_client()
