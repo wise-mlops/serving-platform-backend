@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, UploadFile
 from fastapi.responses import JSONResponse
@@ -64,7 +64,7 @@ def fget_object(bucket_name: str, object_name: str, file_path: Optional[str] = N
 
 
 @router.post("/object/{bucket_name}/download/url", tags=["object"], response_model=Response)
-def presigned_get_object(bucket_name: str, object_name: str, expire_days: Optional[str] = None):
+def presigned_get_object(bucket_name: str, object_name: str, expire_days: Optional[int] = 7):
     return Response.from_result(MODULE_CODE, service.presigned_get_object(bucket_name, object_name,
                                                                           expire_days))
 
@@ -77,8 +77,8 @@ def fput_object(bucket_name: str,
 
 @router.delete("/object/{bucket_name}", tags=["object"], response_model=Response)
 def remove_object(bucket_name: str,
-                  object_name: str):
-    return Response.from_result(MODULE_CODE, service.remove_object(bucket_name, object_name))
+                  object_name: List[str]):
+    return Response.from_result(MODULE_CODE, service.remove_objects(bucket_name, object_name))
 
 
 @router.post("/object/serving/{bucket_name}", tags=["object"], response_model=Response)

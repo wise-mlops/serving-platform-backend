@@ -4,7 +4,7 @@ import io
 import zipfile
 from tempfile import TemporaryDirectory
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import UploadFile
 from minio import Minio, S3Error
@@ -146,11 +146,14 @@ class MinIOService:
             if stat == 200:
                 return minio_response("Object Already", code=409)
             file_size = os.fstat(upload_file.file.fileno()).st_size
-            client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
-            return minio_response(self._get_object_url(bucket_name, object_name, expire_days=7))
+            try:
+                client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
+                return minio_response(self._get_object_url(bucket_name, object_name, expire_days=7))
+            except Exception as e:
+                return minio_response(e.args, code=400)
 
     def fget_object(self, bucket_name: str,
-                    object_name: str, file_path: str, ):
+                    object_name: str, file_path: Optional[str] = None):
         client = self.get_client()
         if file_path is None:
             file_path = object_name
@@ -166,12 +169,12 @@ class MinIOService:
         client = self.get_client()
         return minio_response(client.stat_object(bucket_name=bucket_name, object_name=object_name))
 
-    def remove_object(self, bucket_name: str, object_name: str):
+    def remove_objects(self, bucket_name: str, object_names: List[str]):
         client = self.get_client()
-        objects = client.list_objects(bucket_name, prefix=object_name, recursive=True)
-        for obj in objects:
-            client.remove_object(bucket_name, obj.object_name)
-        client.remove_object(bucket_name, object_name + '/')
+        for object_name in object_names:
+            objects = client.list_objects(bucket_name, prefix=object_name, recursive=True)
+            for obj in objects:
+                client.remove_object(bucket_name, obj.object_name)
         return minio_response("success")
 
     def _get_object_url(self, bucket_name: str, object_name: str, expire_days: int = 7, object_version_id: str = None):
