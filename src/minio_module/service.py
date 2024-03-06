@@ -134,23 +134,31 @@ class MinIOService:
 
         return minio_response(result)
 
-    def put_object(self, bucket_name: str, upload_file: UploadFile, object_name: str):
+    def put_objects(self, bucket_name: str, upload_files: List[UploadFile], folder_path: str):
         client = self.get_client()
-        stat = 0
-        if object_name is None:
-            object_name = upload_file.filename
+        responses = []
 
-        try:
-            stat = client.get_object(bucket_name, object_name).status
-        finally:
-            if stat == 200:
-                return minio_response("Object Already", code=409)
-            file_size = os.fstat(upload_file.file.fileno()).st_size
+        for upload_file in upload_files:
+            object_name = folder_path + '/' + upload_file.filename
+
             try:
-                client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
-                return minio_response(self._get_object_url(bucket_name, object_name, expire_days=7))
+                client.get_object(bucket_name, object_name)
+                responses.append(minio_response("Object Already Exists", code=409))
             except Exception as e:
-                return minio_response(e.args, code=400)
+                if e:
+                    pass
+                try:
+                    file_size = os.fstat(upload_file.file.fileno()).st_size
+                    client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
+                    object_url = self._get_object_url(bucket_name, object_name, expire_days=7)
+                    responses.append(minio_response(object_url))
+                except Exception as e:
+                    responses.append(minio_response(e.args, code=400))
+        result = {
+            "code": 200,
+            "message": [response["message"] for response in responses]
+        }
+        return result
 
     def fget_object(self, bucket_name: str,
                     object_name: str, file_path: Optional[str] = None):

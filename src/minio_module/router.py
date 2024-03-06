@@ -48,8 +48,8 @@ async def list_objects(bucket_name: str,
 
 
 @router.post("/object/{bucket_name}", tags=["object"], response_model=Response)
-def put_object(bucket_name: str, file: UploadFile, object_name: str = None):
-    return Response.from_result(MODULE_CODE, service.put_object(bucket_name, file, object_name))
+def put_object(bucket_name: str, file: List[UploadFile], object_name: str = None):
+    return Response.from_result(MODULE_CODE, service.put_objects(bucket_name, file, object_name))
 
 
 @router.get("/object/{bucket_name}/stat", tags=["object"], response_model=Response)
