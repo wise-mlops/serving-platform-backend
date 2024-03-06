@@ -16,8 +16,10 @@ router = APIRouter(
 
 
 @router.get("", tags=["bucket"], response_model=Response)
-async def list_buckets(page: Optional[int] = None, search_query: Optional[str] = None, col_query: Optional[str] = None):
-    return Response.from_result(MODULE_CODE, service.list_buckets(page, search_query, col_query))
+async def list_buckets(page: Optional[int] = None, search_query: Optional[str] = None, col_query: Optional[str] = None,
+                       sort_query: Optional[bool] = None, sort_query_col: Optional[str] = None):
+    return Response.from_result(MODULE_CODE, service.list_buckets(page, search_query, col_query,
+                                                                  sort_query, sort_query_col))
 
 
 @router.post("", tags=["bucket"], response_model=Response)
@@ -41,10 +43,13 @@ async def list_objects(bucket_name: str,
                        recursive: bool = False,
                        page: Optional[int] = None,
                        search_query: Optional[str] = None,
-                       col_query: Optional[str] = None):
+                       col_query: Optional[str] = None,
+                       sort_query: Optional[bool] = None,
+                       sort_query_col: Optional[str] = None):
     return Response.from_result(MODULE_CODE,
                                 service.list_objects(bucket_name, prefix=prefix, recursive=recursive, page=page,
-                                                     search_query=search_query, col_query=col_query))
+                                                     search_query=search_query, col_query=col_query,
+                                                     sort_query=sort_query, sort_query_col=sort_query_col))
 
 
 @router.post("/object/{bucket_name}", tags=["object"], response_model=Response)

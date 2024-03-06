@@ -31,13 +31,13 @@ class MinIOService:
         return Minio(endpoint=self.endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=self.secure)
 
     def list_buckets(self, page: Optional[int] = None, search_query: Optional[str] = None,
-                     col_query: Optional[str] = None):
+                     col_query: Optional[str] = None, sort_query: Optional[bool] = None,
+                     sort_query_col: Optional[str] = None):
         client = self.get_client()
         metadata_dicts = client.list_buckets()
         bucket_list = [obj.__dict__ for obj in metadata_dicts]
-        if col_query == "_creation_date":
-            for item in bucket_list:
-                item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
+        for item in bucket_list:
+            item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
 
         if search_query:
             bucket_list = [bucket for bucket in bucket_list if search_query.lower() in str(bucket).lower()]
@@ -45,6 +45,9 @@ class MinIOService:
             if col_query:
                 bucket_list = [item for item in bucket_list if search_query.lower()
                                in str(item[col_query]).lower()]
+
+        if (sort_query is not None) and sort_query_col:
+            bucket_list = sorted(bucket_list, key=lambda x: x[sort_query_col], reverse=sort_query)
 
         total_bucket = len(bucket_list)
 
@@ -99,14 +102,19 @@ class MinIOService:
                      recursive: bool = False,
                      page: Optional[int] = None,
                      search_query: Optional[str] = None,
-                     col_query: Optional[str] = None):
+                     col_query: Optional[str] = None,
+                     sort_query: Optional[bool] = None,
+                     sort_query_col: Optional[str] = None):
         client = self.get_client()
         object_list = [*client.list_objects(bucket_name, prefix=prefix, recursive=recursive)]
         object_list = [obj.__dict__ for obj in object_list]
 
-        if col_query == "_last_modified":
-            for item in object_list:
-                item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
+        for item in object_list:
+            item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
+        object_list = [{'object_name': obj['_object_name'],
+                        '_last_modified': obj['_last_modified'],
+                        '_size': obj['_size']}
+                       for obj in object_list]
 
         if search_query:
             object_list = [item for item in object_list if search_query.lower() in str(item).lower()]
@@ -114,6 +122,9 @@ class MinIOService:
             if col_query:
                 object_list = [item for item in object_list if search_query.lower()
                                in str(item[col_query]).lower()]
+
+        if (sort_query is not None) and sort_query_col:
+            object_list = sorted(object_list, key=lambda x: x[sort_query_col], reverse=sort_query)
 
         total_bucket = len(object_list)
 
@@ -146,7 +157,11 @@ class MinIOService:
 
             try:
                 client.get_object(bucket_name, object_name)
-                responses.append(minio_response("Object Already Exists", code=409))
+                result_error = {
+                    "code": 409,
+                    "message": "Object Already Exists"
+                }
+                responses.append(minio_response(result_error, code=409))
             except Exception as e:
                 if e:
                     pass
@@ -190,11 +205,6 @@ class MinIOService:
 
     def _get_object_url(self, bucket_name: str, object_name: str, expire_days: int = 7, object_version_id: str = None):
         client = self.get_client()
-        from src.minio_module.config import get_minio_access_key, get_minio_secret_key
-        one_service = MinIOService(endpoint="http://local.minio.kubeflow.labs.wisenut.com",
-                                   access_key=get_minio_access_key(),
-                                   secret_key=get_minio_secret_key())
-        client = one_service.get_client()
         if expire_days > 7 or expire_days < 1:
             expires = timedelta(days=7)
         else:
