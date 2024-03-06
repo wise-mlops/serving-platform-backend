@@ -139,7 +139,10 @@ class MinIOService:
         responses = []
 
         for upload_file in upload_files:
-            object_name = folder_path + '/' + upload_file.filename
+            if folder_path is None:
+                object_name = upload_file.filename
+            else:
+                object_name = folder_path + '/' + upload_file.filename
 
             try:
                 client.get_object(bucket_name, object_name)
