@@ -1,9 +1,9 @@
-import os
-import json
 import io
+import json
+import os
 import zipfile
-from tempfile import TemporaryDirectory
 from datetime import timedelta
+from tempfile import TemporaryDirectory
 from typing import Optional, List
 
 from fastapi import UploadFile
@@ -11,21 +11,22 @@ from minio import Minio, S3Error
 
 from src import app_config
 from src.kserve_module.schemas import InferenceServiceInfo
+from src.kserve_module.service import KServeService
 from src.minio_module.exceptions import minio_response
 from src.minio_module.schemas import BucketInfo, convert_datetime_to_str
-from src.kserve_module.service import KServeService
 
 my_service = KServeService(app_env=app_config.APP_ENV,
                            config_path=app_config.CLUSTER_KUBE_CONFIG_PATH)
 
 
 class MinIOService:
-    def __init__(self, endpoint, access_key, secret_key):
+    def __init__(self, endpoint, access_key, secret_key, download_host=''):
         endpoint_split = endpoint.split("://")
         self.endpoint = endpoint_split[-1]
         self.access_key = access_key
         self.secret_key = secret_key
         self.secure = True if endpoint_split[0] == "https" else False
+        self.download_host = download_host if download_host != '' else self.endpoint
 
     def get_client(self):
         return Minio(endpoint=self.endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=self.secure)
@@ -209,8 +210,9 @@ class MinIOService:
             expires = timedelta(days=7)
         else:
             expires = timedelta(days=expire_days)
-        return minio_response(client.presigned_get_object(bucket_name, object_name, expires=expires,
-                                                          version_id=object_version_id))
+        object_url = client.presigned_get_object(bucket_name, object_name, expires=expires,
+                                                 version_id=object_version_id)
+        return minio_response(object_url.replace(self.endpoint, self.download_host))
 
     def presigned_get_object(self, bucket_name: str, object_name: str, expire_days: Optional[int] = None,
                              version_id: Optional[str] = None):

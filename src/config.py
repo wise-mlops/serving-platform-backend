@@ -17,6 +17,7 @@ class Config:
         self.CLUSTER_VOLUME_NFS_SERVER = self._config['CLUSTER']['VOLUME_NFS_SERVER']
         self.CLUSTER_VOLUME_NFS_PATH = self._config['CLUSTER']['VOLUME_NFS_PATH']
         self.MINIO_ENDPOINT = self._config['MINIO']['ENDPOINT']
+        self.MINIO_DOWNLOAD_HOST = self._config['MINIO']['DOWNLOAD_HOST']
         self.MINIO_ACCESS_KEY = self._config['MINIO']['ACCESS_KEY']
         self.MINIO_SECRET_KEY = self._config['MINIO']['SECRET_KEY']
 
