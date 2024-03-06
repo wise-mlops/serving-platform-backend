@@ -190,6 +190,11 @@ class MinIOService:
 
     def _get_object_url(self, bucket_name: str, object_name: str, expire_days: int = 7, object_version_id: str = None):
         client = self.get_client()
+        from src.minio_module.config import get_minio_access_key, get_minio_secret_key
+        one_service = MinIOService(endpoint="http://local.minio.kubeflow.labs.wisenut.com",
+                                   access_key=get_minio_access_key(),
+                                   secret_key=get_minio_secret_key())
+        client = one_service.get_client()
         if expire_days > 7 or expire_days < 1:
             expires = timedelta(days=7)
         else:
