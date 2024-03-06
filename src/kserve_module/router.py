@@ -46,8 +46,10 @@ async def get_inference_service(name: str):
 
 @router.get("", response_model=Response)
 async def get_inference_service_list(page: Optional[int] = None, search_query: Optional[str] = None,
-                                     col_query: Optional[str] = None):
-    return Response.from_result(MODULE_CODE, service.get_inference_service_list(page, search_query, col_query))
+                                     col_query: Optional[str] = None, sort_query: Optional[bool] = None,
+                                     sort_query_col: Optional[str] = None):
+    return Response.from_result(MODULE_CODE, service.get_inference_service_list(page, search_query, col_query,
+                                                                                sort_query, sort_query_col))
 
 
 @router.post("/{namespace}/{name}/infer", response_model=Response)

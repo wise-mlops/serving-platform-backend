@@ -303,11 +303,9 @@ class KServeService:
                 "message": i_svc
             }
             return result
-        # except ApiException or MlflowException as e:
         except Exception as e:
             print(e)
             return parse_response(e.args)
-            # raise KServeApiError(e)
 
     def get_inference_service(self, name: str):
         try:
@@ -317,8 +315,6 @@ class KServeService:
                 "message": i_svc
             }
             return result
-        # except ApiException or MlflowException as e:
-        #     raise KServeApiError(e)
         except Exception as e:
             return parse_response(e.args)
 
@@ -349,12 +345,11 @@ class KServeService:
                 "code": 200,
                 "message": 'success'
             }
-        # except ApiException or MlflowException as e:
         except Exception as e:
             return parse_response(e.args)
-            # raise KServeApiError(e)
 
-    def get_inference_service_list(self, page: int, search_query: str, col_query: str):
+    def get_inference_service_list(self, page: int, search_query: str, col_query: str,
+                                   sort_query: bool, sort_query_col: str):
         try:
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
@@ -375,6 +370,9 @@ class KServeService:
                 if col_query:
                     metadata_dicts = [item for item in metadata_dicts if search_query.lower()
                                       in item[col_query].lower()]
+
+            if (sort_query is not None) and sort_query_col:
+                metadata_dicts = sorted(metadata_dicts, key=lambda x: x[sort_query_col], reverse=sort_query)
 
             total_result_details = len(metadata_dicts)
 
@@ -527,8 +525,6 @@ class KServeService:
             }
 
             return result
-        # except ApiException or MlflowException as e:
-        #     raise KServeApiError(e)
         except Exception as e:
             return parse_response(e.args)
 
