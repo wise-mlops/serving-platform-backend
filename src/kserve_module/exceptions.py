@@ -2,7 +2,6 @@ import json
 from typing import Union
 
 from kserve import ApiException
-from mlflow import MlflowException
 
 from src.kserve_module.config import MODULE_CODE
 
@@ -23,7 +22,7 @@ class KServeException(Exception):
 
 
 class KServeApiError(KServeException):
-    def __init__(self, e: Union[ApiException, MlflowException]):
+    def __init__(self, e: Union[ApiException]):
         self.code = 400000
         self.message = 'BAD REQUEST'
         self.result = ['Your request has been denied.']
@@ -32,10 +31,6 @@ class KServeApiError(KServeException):
             self.code = int(f"{MODULE_CODE}{e.status}")
             self.message = e.reason
             self.result = e.body
-        elif isinstance(e, MlflowException):
-            self.code = int(f"{MODULE_CODE}{e.error_code}")
-            self.message = e.message
-            self.result = e.json_kwargs
 
 
 def parse_response(response_str):

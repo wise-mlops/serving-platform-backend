@@ -6,7 +6,6 @@ from kserve import ApiException, V1beta1TransformerSpec, V1beta1LoggerSpec, V1be
 from kserve import V1beta1InferenceServiceSpec, V1beta1PredictorSpec, V1beta1ModelSpec, V1beta1ModelFormat, \
     V1beta1InferenceService, constants, KServeClient
 from kubernetes.client import V1ResourceRequirements, V1Container, V1ContainerPort, V1ObjectMeta, V1EnvVar, V1Toleration
-from mlflow import MlflowClient
 from src import app_config
 from src.kserve_module.exceptions import KServeApiError, parse_response
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
