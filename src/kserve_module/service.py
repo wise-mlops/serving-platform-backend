@@ -17,10 +17,6 @@ class KServeService:
         self.app_env = app_env
         self.config_path = config_path
 
-    @staticmethod
-    def get_mlflow_client():
-        return MlflowClient()
-
     def get_kserve_client(self):
         if self.app_env == "container":
             return KServeClient()
