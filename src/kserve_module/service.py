@@ -1,11 +1,13 @@
 import json
-from typing import List, Optional, Dict
 import re
+from typing import List, Optional, Dict
+
 import requests
 from kserve import ApiException, V1beta1TransformerSpec, V1beta1LoggerSpec, V1beta1Batcher
 from kserve import V1beta1InferenceServiceSpec, V1beta1PredictorSpec, V1beta1ModelSpec, V1beta1ModelFormat, \
     V1beta1InferenceService, constants, KServeClient
 from kubernetes.client import V1ResourceRequirements, V1Container, V1ContainerPort, V1ObjectMeta, V1EnvVar, V1Toleration
+
 from src import app_config
 from src.kserve_module.exceptions import KServeApiError, parse_response
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
@@ -52,12 +54,7 @@ class KServeService:
         return V1beta1ModelFormat(name=model_format.name, version=model_format.version)
 
     def create_v1beta1_model_spec(self, model_spec: ModelSpec):
-        model_name = model_spec.model_name
-        model_format = model_spec.model_format.name
-        protocol_version = model_spec.protocol_version
         storage_uri = model_spec.storage_uri
-        if model_name is not None and model_format == 'mlflow' and protocol_version == 'v2':
-            storage_uri = self.get_latest_model_version_storage_uri(model_name)
         if storage_uri is None:
             return None
         return V1beta1ModelSpec(model_format=self.create_v1beta1_model_format(model_spec.model_format),
@@ -73,11 +70,11 @@ class KServeService:
         if resource_requirements is None:
             return None
         limits = self.get_resource_dict(resource_requirements.limits)
-        requests = self.get_resource_dict(resource_requirements.requests)
-        if limits is None and requests is None:
+        request = self.get_resource_dict(resource_requirements.requests)
+        if limits is None and request is None:
             return None
         return V1ResourceRequirements(limits=limits,
-                                      requests=requests)
+                                      requests=request)
 
     def create_v1_container(self, image: Optional[str] = None,
                             image_pull_policy: Optional[str] = None,
@@ -250,24 +247,6 @@ class KServeService:
             return None
         return annotations
 
-    def get_latest_versions_from_mlflow(self, model_name: str, stage: str = None) -> List:
-        try:
-            stages = None
-            if stage:
-                stages = stage.split(",")
-            return self.get_mlflow_client().get_latest_versions(model_name, stages=stages)
-        except Exception as e:
-            return parse_response(e.args)
-
-    def get_latest_model_version_storage_uri(self, model_name: str, stage: str = None) -> Optional[str]:
-        try:
-            latest_model_versions = self.get_latest_versions_from_mlflow(model_name, stage=stage)
-            if len(latest_model_versions) < 1:
-                return None
-            return latest_model_versions[-1].source
-        except Exception as e:
-            return parse_response(e.args)
-
     def create_v1beta1_inference_service(self, inference_service_info: InferenceServiceInfo):
         inference_service_spec = self.create_v1beta1_inference_service_spec(
             inference_service_spec=inference_service_info.inference_service_spec)
@@ -390,7 +369,8 @@ class KServeService:
         except ApiException as e:
             raise KServeApiError(e)
 
-    def infer_model(self, name: str, namespace: str, model_format: str, data: list):
+    @staticmethod
+    def infer_model(name: str, namespace: str, model_format: str, data: list):
         try:
 
             ingress_url = app_config.ISTIO_INGRESS_HOST
