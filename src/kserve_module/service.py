@@ -6,7 +6,7 @@ from kserve import ApiException, V1beta1TransformerSpec, V1beta1LoggerSpec, V1be
 from kserve import V1beta1InferenceServiceSpec, V1beta1PredictorSpec, V1beta1ModelSpec, V1beta1ModelFormat, \
     V1beta1InferenceService, constants, KServeClient
 from kubernetes.client import V1ResourceRequirements, V1Container, V1ContainerPort, V1ObjectMeta, V1EnvVar, V1Toleration
-from mlflow import MlflowException, MlflowClient
+from mlflow import MlflowClient
 from src import app_config
 from src.kserve_module.exceptions import KServeApiError, parse_response
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
@@ -261,8 +261,8 @@ class KServeService:
             if stage:
                 stages = stage.split(",")
             return self.get_mlflow_client().get_latest_versions(model_name, stages=stages)
-        except MlflowException as e:
-            raise KServeApiError(e)
+        except Exception as e:
+            return parse_response(e.args)
 
     def get_latest_model_version_storage_uri(self, model_name: str, stage: str = None) -> Optional[str]:
         try:
@@ -270,8 +270,8 @@ class KServeService:
             if len(latest_model_versions) < 1:
                 return None
             return latest_model_versions[-1].source
-        except MlflowException as e:
-            raise KServeApiError(e)
+        except Exception as e:
+            return parse_response(e.args)
 
     def create_v1beta1_inference_service(self, inference_service_info: InferenceServiceInfo):
         inference_service_spec = self.create_v1beta1_inference_service_spec(
@@ -304,7 +304,6 @@ class KServeService:
             }
             return result
         except Exception as e:
-            print(e)
             return parse_response(e.args)
 
     def get_inference_service(self, name: str):
@@ -325,7 +324,7 @@ class KServeService:
                 return False
             i_svc = self.get_kserve_client().patch(inference_service_info.name, v1beta1_i_svc)
             return i_svc
-        except ApiException or MlflowException as e:
+        except ApiException as e:
             raise KServeApiError(e)
 
     def replace_inference_service(self, inference_service_info: InferenceServiceInfo):
@@ -335,7 +334,7 @@ class KServeService:
                 return False
             i_svc = self.get_kserve_client().replace(inference_service_info.name, v1beta1_i_svc)
             return i_svc
-        except ApiException or MlflowException as e:
+        except ApiException as e:
             raise KServeApiError(e)
 
     def delete_inference_service(self, name: str):
@@ -393,7 +392,7 @@ class KServeService:
             }
 
             return result
-        except (ApiException, MlflowException) as e:
+        except ApiException as e:
             raise KServeApiError(e)
 
     def infer_model(self, name: str, namespace: str, model_format: str, data: list):
