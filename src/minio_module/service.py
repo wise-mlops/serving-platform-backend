@@ -6,8 +6,10 @@ from datetime import timedelta
 from tempfile import TemporaryDirectory
 from typing import Optional, List
 
+import requests
 from fastapi import UploadFile
 from minio import Minio, S3Error
+from starlette.responses import StreamingResponse
 
 from src import app_config
 from src.kserve_module.schemas import InferenceServiceInfo
@@ -237,12 +239,14 @@ class MinIOService:
         }
         return result
 
-    def fget_object(self, bucket_name: str,
-                    object_name: str, file_path: Optional[str] = None):
-        client = self.get_client()
-        if file_path is None:
-            file_path = object_name
-        return minio_response(client.fget_object(bucket_name, object_name, file_path))
+    def fget_object(self, bucket_name: str, object_name: str):
+        download_url = self._get_object_url(bucket_name, object_name, expire_days=7)
+        result = requests.get(download_url)
+        file = io.BytesIO(result.content)
+        headers = dict()
+        headers["Content-Disposition"] = f"attachment; filename={object_name}"
+        headers["Content-Type"] = "application/octet-stream"
+        return StreamingResponse(file, media_type="application/octet-stream", headers=headers)
 
     def fput_object(self, bucket_name: str,
                     object_name: str, file_path: str):
@@ -268,9 +272,7 @@ class MinIOService:
             expires = timedelta(days=7)
         else:
             expires = timedelta(days=expire_days)
-        object_url = client.presigned_get_object(bucket_name, object_name, expires=expires,
-                                                 version_id=object_version_id)
-        return minio_response(object_url.replace(self.endpoint, self.download_host))
+        return client.presigned_get_object(bucket_name, object_name, expires=expires, version_id=object_version_id)
 
     def presigned_get_object(self, bucket_name: str, object_name: str, expire_days: Optional[int] = None,
                              version_id: Optional[str] = None):

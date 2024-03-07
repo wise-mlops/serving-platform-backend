@@ -78,9 +78,9 @@ def stat_object(bucket_name: str,
     return Response.from_result(MODULE_CODE, service.stat_object(bucket_name, object_name))
 
 
-@router.get("/object/{bucket_name}/download", tags=["object"], response_model=Response)
-def fget_object(bucket_name: str, object_name: str, file_path: Optional[str] = None):
-    return Response.from_result(MODULE_CODE, service.fget_object(bucket_name, object_name, file_path))
+@router.get("/object/{bucket_name}/download", tags=["object"])
+def fget_object(bucket_name: str, object_name: str):
+    return service.fget_object(bucket_name, object_name)
 
 
 @router.post("/object/{bucket_name}/download/url", tags=["object"], response_model=Response)
