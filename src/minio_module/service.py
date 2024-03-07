@@ -111,7 +111,8 @@ class MinIOService:
         object_list = [obj.__dict__ for obj in object_list]
 
         for item in object_list:
-            item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
+            if item['_last_modified'] is not None:
+                item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
         object_list = [{'object_name': obj['_object_name'],
                         '_last_modified': obj['_last_modified'],
                         '_size': obj['_size']}

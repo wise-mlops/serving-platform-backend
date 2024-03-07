@@ -6,7 +6,6 @@ local:
     VOLUME_NFS_PATH: ''
   MINIO:
     ENDPOINT: 'http://local.api.minio.storage-system.labs.wisenut.com'
-    DOWNLOAD_HOST: ''
     ACCESS_KEY: 'minio'
     SECRET_KEY: 'minio123'
 
@@ -18,6 +17,5 @@ container:
     VOLUME_NFS_PATH: ''
   MINIO:
     ENDPOINT: 'http://storage-system-minio.storage-system.svc.cluster.local:9000'
-    DOWNLOAD_HOST: 'local.api.minio.storage-system.labs.wisenut.com'
     ACCESS_KEY: 'minio'
     SECRET_KEY: 'minio123'
