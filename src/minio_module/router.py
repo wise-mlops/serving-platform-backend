@@ -37,6 +37,21 @@ async def remove_bucket(bucket_name: str):
     return Response.from_result(MODULE_CODE, service.remove_bucket(bucket_name))
 
 
+@router.post("/{bucket_name}/policy", tags=["bucket"], response_model=Response)
+async def set_bucket_policy(bucket_name: str):
+    return Response.from_result(MODULE_CODE, service.set_bucket_policy(bucket_name))
+
+
+@router.get("/{bucket_name}/policy", tags=["bucket"], response_model=Response)
+async def get_bucket_policy(bucket_name: str):
+    return Response.from_result(MODULE_CODE, service.get_bucket_policy(bucket_name))
+
+
+@router.delete("/{bucket_name}/policy", tags=["bucket"], response_model=Response)
+async def delete_bucket_policy(bucket_name: str):
+    return Response.from_result(MODULE_CODE, service.delete_bucket_policy(bucket_name))
+
+
 @router.get("/object/{bucket_name}", tags=["object"], response_model=Response)
 async def list_objects(bucket_name: str,
                        prefix: Optional[str] = None,

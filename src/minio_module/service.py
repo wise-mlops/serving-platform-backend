@@ -98,6 +98,63 @@ class MinIOService:
         except S3Error as e:
             return minio_response(e.message, 400)
 
+    def set_bucket_policy(self, bucket_name: str):
+        try:
+            client = self.get_client()
+            available = client.bucket_exists(bucket_name)
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"AWS": "*"},
+                        "Action": ["s3:GetBucketLocation", "s3:ListBucket"],
+                        "Resource": "arn:aws:s3:::my-bucket",
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"AWS": "*"},
+                        "Action": "s3:GetObject",
+                        "Resource": "arn:aws:s3:::my-bucket/*",
+                    },
+                ],
+            }
+            if available:
+                client.set_bucket_policy(bucket_name, json.dumps(policy))
+            return minio_response(available)
+        except S3Error as e:
+            return minio_response(e.message, 400)
+
+    def get_bucket_policy(self, bucket_name: str):
+        try:
+            client = self.get_client()
+            available = client.bucket_exists(bucket_name)
+            if available:
+                return minio_response(client.get_bucket_policy(bucket_name))
+            return minio_response(available)
+        except S3Error as e:
+            return minio_response(e.message, 400)
+
+    def delete_bucket_policy(self, bucket_name: str):
+        try:
+            client = self.get_client()
+            available = client.bucket_exists(bucket_name)
+            if available:
+                client.delete_bucket_policy(bucket_name)
+            return minio_response(available)
+        except S3Error as e:
+            return minio_response(e.message, 400)
+
+    def get_bucket_notification(self, bucket_name: str):
+        try:
+            client = self.get_client()
+            available = client.bucket_exists(bucket_name)
+            if available:
+                return minio_response(client.get_bucket_notification(bucket_name))
+            return minio_response(available)
+        except S3Error as e:
+            return minio_response(e.message, 400)
+
     def list_objects(self, bucket_name: str,
                      prefix: Optional[str] = None,
                      recursive: bool = False,
