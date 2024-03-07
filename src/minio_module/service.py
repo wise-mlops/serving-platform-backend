@@ -55,7 +55,7 @@ class MinIOService:
         total_bucket = len(bucket_list)
 
         if page is not None:
-            result_details_per_page = 10
+            result_details_per_page = 6
             start_index = (page - 1) * result_details_per_page
             end_index = start_index + result_details_per_page
             bucket_list = bucket_list[start_index:end_index]
