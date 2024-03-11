@@ -45,16 +45,18 @@ async def get_inference_service(name: str):
 
 
 @router.get("", response_model=Response)
-async def get_inference_service_list(page: Optional[int] = None, search_query: Optional[str] = None,
+async def get_inference_service_list(page_index: Optional[int] = 1, page_object: Optional[int] = 10,
+                                     paging: bool = True, search_query: Optional[str] = None,
                                      col_query: Optional[str] = None, sort_query: Optional[bool] = None,
                                      sort_query_col: Optional[str] = None):
-    return Response.from_result(MODULE_CODE, service.get_inference_service_list(page, search_query, col_query,
-                                                                                sort_query, sort_query_col))
+    return Response.from_result(MODULE_CODE,
+                                service.get_inference_service_list(page_index, page_object, paging, search_query,
+                                                                   col_query, sort_query, sort_query_col))
 
 
 @router.post("/{namespace}/{name}/infer", response_model=Response)
-async def infer_model(name: str, namespace: str, model_format: str, data: list):
-    return Response.from_result(MODULE_CODE, service.infer_model(name, namespace, model_format, data))
+async def infer_model(name: str, model_format: str, data: list):
+    return Response.from_result(MODULE_CODE, service.infer_model(name, model_format, data))
 
 
 @router.get("/detail/{name}", response_model=Response)

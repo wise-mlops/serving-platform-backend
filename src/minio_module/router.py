@@ -16,10 +16,11 @@ router = APIRouter(
 
 
 @router.get("", tags=["bucket"], response_model=Response)
-async def list_buckets(page: Optional[int] = None, search_query: Optional[str] = None, col_query: Optional[str] = None,
+async def list_buckets(page_index: Optional[int] = 1, page_object: Optional[int] = 6, paging: bool = True,
+                       search_query: Optional[str] = None, col_query: Optional[str] = None,
                        sort_query: Optional[bool] = None, sort_query_col: Optional[str] = None):
-    return Response.from_result(MODULE_CODE, service.list_buckets(page, search_query, col_query,
-                                                                  sort_query, sort_query_col))
+    return Response.from_result(MODULE_CODE, service.list_buckets(page_index, page_object, paging, search_query,
+                                                                  col_query, sort_query, sort_query_col))
 
 
 @router.post("", tags=["bucket"], response_model=Response)
@@ -56,13 +57,16 @@ async def delete_bucket_policy(bucket_name: str):
 async def list_objects(bucket_name: str,
                        prefix: Optional[str] = None,
                        recursive: bool = False,
-                       page: Optional[int] = None,
+                       page_index: Optional[int] = 1,
+                       page_object: Optional[int] = 10,
+                       paging: bool = True,
                        search_query: Optional[str] = None,
                        col_query: Optional[str] = None,
                        sort_query: Optional[bool] = None,
                        sort_query_col: Optional[str] = None):
     return Response.from_result(MODULE_CODE,
-                                service.list_objects(bucket_name, prefix=prefix, recursive=recursive, page=page,
+                                service.list_objects(bucket_name, prefix=prefix, recursive=recursive,
+                                                     page_index=page_index, page_object=page_object, paging=paging,
                                                      search_query=search_query, col_query=col_query,
                                                      sort_query=sort_query, sort_query_col=sort_query_col))
 
