@@ -321,7 +321,8 @@ class KServeService:
         except Exception as e:
             return parse_response(e.args)
 
-    def get_inference_service_list(self, page: int, search_query: str, col_query: str,
+    def get_inference_service_list(self, page_index: int, page_object: int,
+                                   paging: bool, search_query: str, col_query: str,
                                    sort_query: bool, sort_query_col: str):
         try:
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
@@ -349,10 +350,9 @@ class KServeService:
 
             total_result_details = len(metadata_dicts)
 
-            if page is not None:
-                result_details_per_page = 10
-                start_index = (page - 1) * result_details_per_page
-                end_index = start_index + result_details_per_page
+            if paging:
+                start_index = (page_index - 1) * page_object
+                end_index = start_index + page_object
                 metadata_dicts = metadata_dicts[start_index:end_index]
 
             message = {
@@ -369,14 +369,21 @@ class KServeService:
         except ApiException as e:
             raise KServeApiError(e)
 
-    @staticmethod
-    def infer_model(name: str, namespace: str, model_format: str, data: list):
+    def infer_model(self, name: str, model_format: str, data: list):
         try:
-
             ingress_url = app_config.ISTIO_INGRESS_HOST
+            host = self.get_inference_service_host(name)
+
+            if host is None:
+                result = {
+                    "code": 404,
+                    "message": "음슴"
+                }
+                return result
+
             headers = {
                 "Content-Type": "application/json",
-                "Host": f"{name}.{namespace}.svc.cluster.local"
+                "Host": host
             }
             protocol_version = "v1"
             inference_url = ""
@@ -451,42 +458,60 @@ class KServeService:
         except Exception as e:
             return parse_response(e.args)
 
+    def get_inference_service_host(self, name: str):
+        i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
+        result_detail = json.loads(json.dumps(i_svc_detail))
+        url = result_detail['status'].get('url', None)
+        if url is not None:
+            url = url.replace("http://", "")
+        return url
+
+    def get_inference_service_detail_url(self, name: str):
+        i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
+        result_detail = json.loads(json.dumps(i_svc_detail))
+        if result_detail['spec']['predictor']['model']['modelFormat']['name'] == "pytorch" and \
+                result_detail['spec']['predictor']['model'].get("protocolVersion", None) is None:
+            result_detail['spec']['predictor']['model']['modelFormat']['name'] = "T5"
+        url = "http://211.39.140.216:80/kserve/kubeflow-user-example-com/" + name + "/infer?model_format=" + \
+              result_detail['spec']['predictor']['model']['modelFormat']['name']
+
+        return url
+
     def get_inference_service_parse_detail(self, name: str):
         try:
             i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
             result_detail = json.loads(json.dumps(i_svc_detail))
 
             detail_metadata_dicts = {
-                'Name': result_detail['metadata']['name'],
-                'OVERVIEW': {
-                    'Info': {
-                        'Status': next(
+                'name': result_detail['metadata']['name'],
+                'overview': {
+                    'info': {
+                        'status': next(
                             (cond['status'] for cond in result_detail['status'].get('conditions', []) if
                              cond['type'] == 'Ready')),
-                        'URL': result_detail['status'].get('url', 'InferenceService is not ready to receive traffic '
-                                                                  'yet.'),
-                        'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
-                        'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
+                        'api_url': self.get_inference_service_detail_url(name),
+                        'storage_uri': result_detail['spec']['predictor']['model']['storageUri'],
+                        'model_format': result_detail['spec']['predictor']['model']['modelFormat']['name'],
                     },
-                    'InferenceService Conditions': result_detail['status']['conditions'],
+                    'inference_service_conditions': result_detail['status']['conditions'],
                 },
-                'DETAILS': {
-                    'Info': {
-                        'Status': next(
+                'details': {
+                    'info': {
+                        'status': next(
                             (cond['status'] for cond in result_detail['status'].get('conditions', []) if
                              cond['type'] == 'Ready')),
-                        'Name': result_detail['metadata']['name'],
-                        'Namespace': result_detail['metadata']['namespace'],
-                        'URL': result_detail['status'].get('url', 'InferenceService is not ready to receive traffic '
+                        'name': result_detail['metadata']['name'],
+                        'namespace': result_detail['metadata']['namespace'],
+                        'url': result_detail['status'].get('url', 'InferenceService is not ready to receive traffic '
                                                                   'yet.'),
-                        'Annotations': result_detail['metadata'].get('annotations', 'InferenceService is not ready to '
+                        'annotations': result_detail['metadata'].get('annotations', 'InferenceService is not ready to '
                                                                                     'receive traffic yet.'),
-                        'creationTimestamp': result_detail['metadata']['creationTimestamp'],
+                        'creation_timestamp': result_detail['metadata']['creationTimestamp'],
                     },
-                    'Predictor: spec': {
-                        'Storage URI': result_detail['spec']['predictor']['model']['storageUri'],
-                        'ModelFormat': result_detail['spec']['predictor']['model']['modelFormat']['name'],
-                        'Service account': result_detail['spec']['predictor'].get('serviceAccountName',
+                    'predictor_spec': {
+                        'storage_uri': result_detail['spec']['predictor']['model']['storageUri'],
+                        'model_format': result_detail['spec']['predictor']['model']['modelFormat']['name'],
+                        'service_account': result_detail['spec']['predictor'].get('serviceAccountName',
                                                                                   'InferenceService is not ready to '
                                                                                   'receive traffic yet.')
                     }

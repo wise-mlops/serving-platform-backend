@@ -33,9 +33,9 @@ class MinIOService:
     def get_client(self):
         return Minio(endpoint=self.endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=self.secure)
 
-    def list_buckets(self, page: Optional[int] = None, search_query: Optional[str] = None,
-                     col_query: Optional[str] = None, sort_query: Optional[bool] = None,
-                     sort_query_col: Optional[str] = None):
+    def list_buckets(self, page_index: Optional[int] = None, page_object: Optional[int] = None, paging: bool = True,
+                     search_query: Optional[str] = None, col_query: Optional[str] = None,
+                     sort_query: Optional[bool] = None, sort_query_col: Optional[str] = None):
         client = self.get_client()
         metadata_dicts = client.list_buckets()
         bucket_list = [obj.__dict__ for obj in metadata_dicts]
@@ -54,10 +54,9 @@ class MinIOService:
 
         total_bucket = len(bucket_list)
 
-        if page is not None:
-            result_details_per_page = 6
-            start_index = (page - 1) * result_details_per_page
-            end_index = start_index + result_details_per_page
+        if paging:
+            start_index = (page_index - 1) * page_object
+            end_index = start_index + page_object
             bucket_list = bucket_list[start_index:end_index]
 
         message = {
@@ -160,7 +159,9 @@ class MinIOService:
     def list_objects(self, bucket_name: str,
                      prefix: Optional[str] = None,
                      recursive: bool = False,
-                     page: Optional[int] = None,
+                     page_index: Optional[int] = None,
+                     page_object: Optional[int] = None,
+                     paging: bool = True,
                      search_query: Optional[str] = None,
                      col_query: Optional[str] = None,
                      sort_query: Optional[bool] = None,
@@ -172,7 +173,7 @@ class MinIOService:
         for item in object_list:
             if item['_last_modified'] is not None:
                 item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
-        object_list = [{'object_name': obj['_object_name'],
+        object_list = [{'_object_name': obj['_object_name'],
                         '_last_modified': obj['_last_modified'],
                         '_size': obj['_size']}
                        for obj in object_list]
@@ -185,14 +186,14 @@ class MinIOService:
                                in str(item[col_query]).lower()]
 
         if (sort_query is not None) and sort_query_col:
-            object_list = sorted(object_list, key=lambda x: x[sort_query_col], reverse=sort_query)
+            object_list = sorted(object_list, key=lambda x: (x[sort_query_col] is None, x[sort_query_col]),
+                                 reverse=sort_query)
 
         total_bucket = len(object_list)
 
-        if page is not None:
-            result_details_per_page = 10
-            start_index = (page - 1) * result_details_per_page
-            end_index = start_index + result_details_per_page
+        if paging:
+            start_index = (page_index - 1) * page_object
+            end_index = start_index + page_object
             object_list = object_list[start_index:end_index]
 
         message = {
