@@ -377,7 +377,7 @@ class KServeService:
             if host is None:
                 result = {
                     "code": 404,
-                    "message": "음슴"
+                    "message": "host is not found"
                 }
                 return result
 
@@ -472,7 +472,7 @@ class KServeService:
         if result_detail['spec']['predictor']['model']['modelFormat']['name'] == "pytorch" and \
                 result_detail['spec']['predictor']['model'].get("protocolVersion", None) is None:
             result_detail['spec']['predictor']['model']['modelFormat']['name'] = "T5"
-        url = "http://211.39.140.216:80/kserve/kubeflow-user-example-com/" + name + "/infer?model_format=" + \
+        url = "http://211.39.140.216/kserve/kubeflow-user-example-com/" + name + "/infer?model_format=" + \
               result_detail['spec']['predictor']['model']['modelFormat']['name']
 
         return url
