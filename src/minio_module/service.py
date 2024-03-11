@@ -240,14 +240,48 @@ class MinIOService:
         }
         return result
 
-    def fget_object(self, bucket_name: str, object_name: str):
-        download_url = self._get_object_url(bucket_name, object_name, expire_days=7)
-        result = requests.get(download_url)
-        file = io.BytesIO(result.content)
-        headers = dict()
-        headers["Content-Disposition"] = f"attachment; filename={object_name}"
-        headers["Content-Type"] = "application/octet-stream"
-        return StreamingResponse(file, media_type="application/octet-stream", headers=headers)
+    def _add_folder_to_zip(self, zip_file: zipfile.ZipFile, bucket_name: str, folder_name: str):
+        item_list = self.list_objects(bucket_name=bucket_name, prefix=folder_name, recursive=True, paging=False)
+        item_list = item_list['message']['message']['result_details']
+        for item in item_list:
+            object_item = item['_object_name']
+            if object_item.endswith('/'):
+                self._add_folder_to_zip(zip_file, bucket_name, object_item)
+            else:
+                download_url = self._get_object_url(bucket_name, object_item, expire_days=7)
+                result = requests.get(download_url)
+                file = io.BytesIO(result.content)
+                zip_file.writestr(os.path.join(folder_name, os.path.relpath(object_item, folder_name)), file.getvalue())
+
+    def fget_object(self, bucket_name: str, object_names: List[str]):
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
+            for item in object_names:
+                if item.endswith('/'):
+                    self._add_folder_to_zip(zip_file, bucket_name, item)
+                else:
+                    download_url = self._get_object_url(bucket_name, item, expire_days=7)
+                    result = requests.get(download_url)
+                    file = io.BytesIO(result.content)
+                    zip_file.writestr(os.path.basename(item), file.getvalue())
+
+        zip_buffer.seek(0)
+        if len(object_names) == 1 and not object_names[0].endswith('/'):
+            file_name = object_names[0]
+            download_url = self._get_object_url(bucket_name, file_name, expire_days=7)
+            result = requests.get(download_url)
+            file_content = result.content
+            headers = {
+                "Content-Disposition": f"attachment; filename={file_name}",
+                "Content-Type": "application/octet-stream",
+            }
+            return StreamingResponse(io.BytesIO(file_content), media_type="application/octet-stream", headers=headers)
+        else:
+            headers = {
+                "Content-Disposition": "attachment; filename=download.zip",
+                "Content-Type": "application/zip",
+            }
+            return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
 
     def fput_object(self, bucket_name: str,
                     object_name: str, file_path: str):

@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, UploadFile, Query
 from fastapi.responses import JSONResponse
 
 from src.minio_module import service
@@ -83,8 +83,8 @@ def stat_object(bucket_name: str,
 
 
 @router.get("/object/{bucket_name}/download", tags=["object"])
-def fget_object(bucket_name: str, object_name: str):
-    return service.fget_object(bucket_name, object_name)
+def fget_object(bucket_name: str, object_names: List[str] = Query()):
+    return service.fget_object(bucket_name, object_names)
 
 
 @router.post("/object/{bucket_name}/download/url", tags=["object"], response_model=Response)
