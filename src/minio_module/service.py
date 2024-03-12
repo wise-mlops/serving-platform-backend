@@ -1,7 +1,9 @@
 import io
 import json
 import os
+import re
 import zipfile
+from urllib.parse import quote_plus
 from datetime import timedelta
 from tempfile import TemporaryDirectory
 from typing import Optional, List
@@ -73,12 +75,29 @@ class MinIOService:
         client = self.get_client()
         return minio_response(client.bucket_exists(bucket_name))
 
+    @staticmethod
+    def validate_bucket_name(bucket_name):
+        if len(bucket_name) < 3 or len(bucket_name) > 63:
+            raise Exception("Bucket name length should be between 3 and 63 characters.")
+
+        if not bucket_name[0].isalnum() or not bucket_name[-1].isalnum():
+            raise Exception("Bucket name should start and end with alphanumeric characters.")
+
+        if not re.match(r'^[a-z0-9.-]+$', bucket_name):
+            raise Exception("Bucket name should only contain lowercase letters, numbers, dots, and hyphens.")
+
+        if '..' in bucket_name:
+            raise Exception("Bucket name should not contain consecutive dots.")
+
+        return bucket_name
+
     def make_bucket(self, bucket_info: BucketInfo):
         try:
+            bucket_name = self.validate_bucket_name(bucket_info.bucket_name)
             client = self.get_client()
-            available = not client.bucket_exists(bucket_info.bucket_name)
+            available = not client.bucket_exists(bucket_name)
             if available:
-                client.make_bucket(bucket_info.bucket_name, object_lock=bucket_info.object_lock)
+                client.make_bucket(bucket_name, object_lock=bucket_info.object_lock)
             elif not available:
                 available = {
                     "status": available,
@@ -268,6 +287,7 @@ class MinIOService:
         zip_buffer.seek(0)
         if len(object_names) == 1 and not object_names[0].endswith('/'):
             file_name = object_names[0]
+            file_name = quote_plus(file_name.encode('utf-8'))
             download_url = self._get_object_url(bucket_name, file_name, expire_days=7)
             result = requests.get(download_url)
             file_content = result.content
