@@ -3,7 +3,6 @@ import json
 import os
 import re
 import zipfile
-from urllib.parse import quote_plus
 from datetime import timedelta
 from tempfile import TemporaryDirectory
 from typing import Optional, List
@@ -287,7 +286,6 @@ class MinIOService:
         zip_buffer.seek(0)
         if len(object_names) == 1 and not object_names[0].endswith('/'):
             file_name = object_names[0]
-            file_name = quote_plus(file_name.encode('utf-8'))
             download_url = self._get_object_url(bucket_name, file_name, expire_days=7)
             result = requests.get(download_url)
             file_content = result.content
