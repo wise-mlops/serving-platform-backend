@@ -273,15 +273,15 @@ class MinIOService:
                 zip_file.writestr(os.path.join(folder_name, os.path.relpath(object_item, folder_name)), file.getvalue())
 
     def fget_object(self, bucket_name: str, object_names: List[str]):
-        compress = False
         filename = "download.zip"
 
-        if len(object_names) == 1:
+        if len(object_names) == 1 and not object_names[0].endswith('/'):
             filename = object_names[0]
-            if filename.endswith('/'):
-                compress = True
-
-        if compress:
+            download_url = self._get_object_url(bucket_name, object_names[0], expire_days=7)
+            result = requests.get(download_url)
+            file_content = io.BytesIO(result.content)
+            media_type = "application/octet-stream"
+        else:
             file_content = io.BytesIO()
             with zipfile.ZipFile(file_content, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
                 for item in object_names:
@@ -294,11 +294,6 @@ class MinIOService:
                         zip_file.writestr(os.path.basename(item), file.getvalue())
             file_content.seek(0)
             media_type = "application/zip"
-        else:
-            download_url = self._get_object_url(bucket_name, filename, expire_days=7)
-            result = requests.get(download_url)
-            file_content = io.BytesIO(result.content)
-            media_type = "application/octet-stream"
         return self.create_file_response(stream=file_content, media_type=media_type, filename=filename)
 
     @staticmethod
