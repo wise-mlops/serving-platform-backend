@@ -35,30 +35,30 @@ class MinIOService:
     def get_client(self):
         return Minio(endpoint=self.endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=self.secure)
 
-    def list_buckets(self, page_index: Optional[int] = None, page_object: Optional[int] = None, paging: bool = True,
-                     search_query: Optional[str] = None, col_query: Optional[str] = None,
-                     sort_query: Optional[bool] = None, sort_query_col: Optional[str] = None):
+    def list_buckets(self, page_index: Optional[int] = None, page_size: Optional[int] = None,
+                     search_keyword: Optional[str] = None, search_column: Optional[str] = None,
+                     sort: Optional[bool] = None, sort_column: Optional[str] = None):
         client = self.get_client()
         metadata_dicts = client.list_buckets()
         bucket_list = [obj.__dict__ for obj in metadata_dicts]
         for item in bucket_list:
             item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
 
-        if search_query:
-            bucket_list = [bucket for bucket in bucket_list if search_query.lower() in str(bucket).lower()]
+        if search_keyword:
+            bucket_list = [bucket for bucket in bucket_list if search_keyword.lower() in str(bucket).lower()]
 
-            if col_query:
-                bucket_list = [item for item in bucket_list if search_query.lower()
-                               in str(item[col_query]).lower()]
+            if search_column:
+                bucket_list = [item for item in bucket_list if search_keyword.lower()
+                               in str(item[search_column]).lower()]
 
-        if (sort_query is not None) and sort_query_col:
-            bucket_list = sorted(bucket_list, key=lambda x: x[sort_query_col], reverse=sort_query)
+        if (sort is not None) and sort_column:
+            bucket_list = sorted(bucket_list, key=lambda x: x[sort_column], reverse=sort)
 
         total_bucket = len(bucket_list)
 
-        if paging:
-            start_index = (page_index - 1) * page_object
-            end_index = start_index + page_object
+        if page_size > 0:
+            start_index = (page_index - 1) * page_size
+            end_index = start_index + page_size
             bucket_list = bucket_list[start_index:end_index]
 
         message = {
@@ -179,12 +179,11 @@ class MinIOService:
                      prefix: Optional[str] = None,
                      recursive: bool = False,
                      page_index: Optional[int] = None,
-                     page_object: Optional[int] = None,
-                     paging: bool = True,
-                     search_query: Optional[str] = None,
-                     col_query: Optional[str] = None,
-                     sort_query: Optional[bool] = None,
-                     sort_query_col: Optional[str] = None):
+                     page_size: Optional[int] = None,
+                     search_keyword: Optional[str] = None,
+                     search_column: Optional[str] = None,
+                     sort: Optional[bool] = None,
+                     sort_column: Optional[str] = None):
         client = self.get_client()
         object_list = [*client.list_objects(bucket_name, prefix=prefix, recursive=recursive)]
         object_list = [obj.__dict__ for obj in object_list]
@@ -197,22 +196,22 @@ class MinIOService:
                         '_size': obj['_size']}
                        for obj in object_list]
 
-        if search_query:
-            object_list = [item for item in object_list if search_query.lower() in str(item).lower()]
+        if search_keyword:
+            object_list = [item for item in object_list if search_keyword.lower() in str(item).lower()]
 
-            if col_query:
-                object_list = [item for item in object_list if search_query.lower()
-                               in str(item[col_query]).lower()]
+            if search_column:
+                object_list = [item for item in object_list if search_keyword.lower()
+                               in str(item[search_column]).lower()]
 
-        if (sort_query is not None) and sort_query_col:
-            object_list = sorted(object_list, key=lambda x: (x[sort_query_col] is None, x[sort_query_col]),
-                                 reverse=sort_query)
+        if (sort is not None) and sort_column:
+            object_list = sorted(object_list, key=lambda x: (x[sort_column] is None, x[sort_column]),
+                                 reverse=sort)
 
         total_bucket = len(object_list)
 
-        if paging:
-            start_index = (page_index - 1) * page_object
-            end_index = start_index + page_object
+        if page_size > 0:
+            start_index = (page_index - 1) * page_size
+            end_index = start_index + page_size
             object_list = object_list[start_index:end_index]
 
         message = {
@@ -260,7 +259,7 @@ class MinIOService:
         return result
 
     def _add_folder_to_zip(self, zip_file: zipfile.ZipFile, bucket_name: str, folder_name: str):
-        item_list = self.list_objects(bucket_name=bucket_name, prefix=folder_name, recursive=True, paging=False)
+        item_list = self.list_objects(bucket_name=bucket_name, prefix=folder_name, recursive=True)
         item_list = item_list['message']['message']['result_details']
         for item in item_list:
             object_item = item['_object_name']

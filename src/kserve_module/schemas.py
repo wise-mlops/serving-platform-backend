@@ -112,3 +112,25 @@ class InferenceServiceInfo(BaseModel):
     inference_service_spec: InferenceServiceSpec
     sidecar_inject: bool = False
     enable_prometheus_scraping: bool = False
+
+    class Config:
+        orm_mode = True
+        schema_extra = {
+            "example": {
+                "name": "{{MODEL_NAME}}",
+                "namespace": "kubeflow-user-example-com",
+                "inference_service_spec": {
+                    "predictor": {
+                        "model_spec": {
+                            "storage_uri": "s3://{{BUCKET_NAME}}/{{MODEL_NAME}}",
+                            "protocolVersion": "v2",
+                            "model_format": {
+                                "name": "pytorch"
+                            }
+                        },
+                        "service_account_name": "kserve-sa"
+                    }
+                },
+                "sidecar_inject": "false"
+            }
+        }

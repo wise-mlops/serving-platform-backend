@@ -321,9 +321,8 @@ class KServeService:
         except Exception as e:
             return parse_response(e.args)
 
-    def get_inference_service_list(self, page_index: int, page_object: int,
-                                   paging: bool, search_query: str, col_query: str,
-                                   sort_query: bool, sort_query_col: str):
+    def get_inference_service_list(self, page_index: int, page_size: int, search_keyword: str, search_column: str,
+                                   sort: bool, sort_column: str):
         try:
             i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
             result = json.loads(json.dumps(i_svc))
@@ -337,22 +336,22 @@ class KServeService:
                                    'Not Ready')
                                } for item in result['items']]
 
-            if search_query:
+            if search_keyword:
                 metadata_dicts = [result_detail for result_detail in metadata_dicts if
-                                  any(search_query.lower() in str(value).lower() for value in result_detail.values())]
+                                  any(search_keyword.lower() in str(value).lower() for value in result_detail.values())]
 
-                if col_query:
-                    metadata_dicts = [item for item in metadata_dicts if search_query.lower()
-                                      in item[col_query].lower()]
+                if search_column:
+                    metadata_dicts = [item for item in metadata_dicts if search_keyword.lower()
+                                      in item[search_column].lower()]
 
-            if (sort_query is not None) and sort_query_col:
-                metadata_dicts = sorted(metadata_dicts, key=lambda x: x[sort_query_col], reverse=sort_query)
+            if (sort is not None) and sort_column:
+                metadata_dicts = sorted(metadata_dicts, key=lambda x: x[sort_column], reverse=sort)
 
             total_result_details = len(metadata_dicts)
 
-            if paging:
-                start_index = (page_index - 1) * page_object
-                end_index = start_index + page_object
+            if page_size > 0:
+                start_index = (page_index - 1) * page_size
+                end_index = start_index + page_size
                 metadata_dicts = metadata_dicts[start_index:end_index]
 
             message = {
