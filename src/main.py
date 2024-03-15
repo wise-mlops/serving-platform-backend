@@ -7,6 +7,7 @@ from uvicorn import Config, Server
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 
+from src.config import DESCRIPTION
 from src.minio_module import router as minio_router
 from src.minio_module.exceptions import MinIOException
 from src.kserve_module import router as kserve_router
@@ -52,8 +53,8 @@ def setup_logging():
 
 
 app = FastAPI(
-    title="Python FastAPI Template",
-    description="ML Ops Python FastAPI Template",
+    title="Wise Serving Platform",
+    description=DESCRIPTION,
     version="0.0.1",
 )
 
