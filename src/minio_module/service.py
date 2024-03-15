@@ -179,7 +179,7 @@ class MinIOService:
                      prefix: Optional[str] = None,
                      recursive: bool = False,
                      page_index: Optional[int] = None,
-                     page_size: Optional[int] = None,
+                     page_size: Optional[int] = 0,
                      search_keyword: Optional[str] = None,
                      search_column: Optional[str] = None,
                      sort: Optional[bool] = None,

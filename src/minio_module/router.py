@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from fastapi import APIRouter, UploadFile, Query, Path
+from fastapi import APIRouter, UploadFile, Query, Path, Body
 from fastapi.responses import JSONResponse
 
 from src.minio_module import service
@@ -121,9 +121,9 @@ def stat_object(bucket_name: str = Path(..., description='bucket의 이름 설�
     return Response.from_result(MODULE_CODE, service.stat_object(bucket_name, object_name))
 
 
-@router.get("/object/{bucket_name}/download", tags=["object"])
+@router.post("/object/{bucket_name}/download", tags=["object"])
 def fget_object(bucket_name: str = Path(..., description='bucket의 이름 설정'),
-                object_names: List[str] = Query(..., description='다운로드 할 파일명 설정')):
+                object_names: List[str] = Body(..., description='다운로드 할 파일명 설정')):
     """
     파일을 다운로드 합니다.\n
         - 여러개의 파일과 폴더는 zip 파일로 다운로드.\n
