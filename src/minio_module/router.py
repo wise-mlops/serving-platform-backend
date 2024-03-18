@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from fastapi import APIRouter, UploadFile, Query, Path, Body
+from fastapi import APIRouter, UploadFile, Query, Path
 from fastapi.responses import JSONResponse
 
 from src.minio_module import service
