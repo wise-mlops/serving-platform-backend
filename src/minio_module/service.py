@@ -43,9 +43,10 @@ class MinIOService:
         bucket_list = [obj.__dict__ for obj in metadata_dicts]
         for item in bucket_list:
             item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
-
+        print(bucket_list)
+        print(type(bucket_list[0]))
         if search_keyword:
-            bucket_list = [bucket for bucket in bucket_list if search_keyword.lower() in str(bucket).lower()]
+            bucket_list = [bucket for bucket in bucket_list if search_keyword.lower() in str(bucket.values()).lower()]
 
             if search_column:
                 bucket_list = [item for item in bucket_list if search_keyword.lower()
@@ -197,7 +198,7 @@ class MinIOService:
                        for obj in object_list]
 
         if search_keyword:
-            object_list = [item for item in object_list if search_keyword.lower() in str(item).lower()]
+            object_list = [item for item in object_list if search_keyword.lower() in str(item.values()).lower()]
 
             if search_column:
                 object_list = [item for item in object_list if search_keyword.lower()
