@@ -84,13 +84,23 @@ async def get_inference_service_list(page_index: Optional[int] = Query(default=1
 
 @router.post("/{namespace}/{name}/infer", response_model=Response)
 async def infer_model(name: str = Path(..., description='inference service의 모델명 설정'),
-                      model_format: str = Query(..., description='inference service 모델의 프레임워크 설정'),
                       data: list = Body(..., description='테스트 포맷에 맞게 input값을 설정')):
     """
     inference service를 통해 모델을 테스트 해볼 수 있습니다.\n
         - input값은 각 포맷에 맞게 입력시 output을 받아볼 수 있습니다.
     """
-    return Response.from_result(MODULE_CODE, service.infer_model(name, model_format, data))
+    return Response.from_result(MODULE_CODE, service.infer_model(name=name, data=data))
+
+
+@router.post("/{namespace}/{name}/infer/{task}", response_model=Response)
+async def infer_nlp(name: str = Path(..., description='inference service의 모델명 설정'),
+                    task: str = Path(..., description='nlp task 설정 (ex. smr, qa, query, dst'),
+                    data: dict = Body(..., description='테스트 포맷에 맞게 input값을 설정')):
+    """
+    inference service를 통해 모델을 테스트 해볼 수 있습니다.\n
+        - input값은 각 포맷에 맞게 입력시 output을 받아볼 수 있습니다.
+    """
+    return Response.from_result(MODULE_CODE, service.infer_nlp(name=name, data=data, task=task))
 
 
 @router.get("/detail/{name}", response_model=Response)

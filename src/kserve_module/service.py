@@ -1,5 +1,4 @@
 import json
-import re
 from typing import List, Optional, Dict
 
 import requests
@@ -9,7 +8,7 @@ from kserve import V1beta1InferenceServiceSpec, V1beta1PredictorSpec, V1beta1Mod
 from kubernetes.client import V1ResourceRequirements, V1Container, V1ContainerPort, V1ObjectMeta, V1EnvVar, V1Toleration
 
 from src import app_config
-from src.kserve_module.exceptions import KServeApiError, parse_response
+from src.kserve_module.exceptions import KServeApiError, KServeException
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
     InferenceServiceSpec, InferenceServiceInfo, TransformerSpec, Port, Logger, Env, Toleration, Container, Batcher
 
@@ -272,24 +271,18 @@ class KServeService:
             if v1beta1_i_svc is None:
                 return False
             i_svc = self.get_kserve_client().create(v1beta1_i_svc)
-            result = {
-                "code": 200,
-                "message": i_svc
-            }
-            return result
-        except Exception as e:
-            return parse_response(e.args)
+            return i_svc
+        except ApiException as e:
+            raise KServeApiError(e)
 
-    def get_inference_service(self, name: str):
+    def get_inference_service(self, name: str, namespace: str = 'kubeflow-user-example-com', parse_json: bool = False):
         try:
-            i_svc = self.get_kserve_client().get(name=name, namespace='kubeflow-user-example-com')
-            result = {
-                "code": 200,
-                "message": i_svc
-            }
-            return result
-        except Exception as e:
-            return parse_response(e.args)
+            i_svc = self.get_kserve_client().get(name=name, namespace=namespace)
+            if parse_json:
+                return json.loads(json.dumps(i_svc))
+            return i_svc
+        except ApiException and RuntimeError as e:
+            raise KServeApiError(e)
 
     def patch_inference_service(self, inference_service_info: InferenceServiceInfo):
         try:
@@ -311,235 +304,219 @@ class KServeService:
         except ApiException as e:
             raise KServeApiError(e)
 
-    def delete_inference_service(self, name: str):
+    def delete_inference_service(self, name: str, namespace: str = 'kubeflow-user-example-com'):
         try:
-            self.get_kserve_client().delete(name=name, namespace="kubeflow-user-example-com")
-            return {
-                "code": 200,
-                "message": 'success'
-            }
-        except Exception as e:
-            return parse_response(e.args)
-
-    def get_inference_service_list(self, page_index: int, page_size: int, search_keyword: str, search_column: str,
-                                   sort: bool, sort_column: str):
-        try:
-            i_svc = self.get_kserve_client().get(namespace="kubeflow-user-example-com")
-            result = json.loads(json.dumps(i_svc))
-
-            metadata_dicts = [{'name': item['metadata']['name'],
-                               'modelFormat': item['spec']['predictor']['model']['modelFormat']['name'],
-                               'creationTimestamp': item['metadata']['creationTimestamp'],
-                               'status': next(
-                                   (cond['status'] for cond in item['status'].get('conditions', []) if
-                                    cond['type'] == 'Ready'),
-                                   'Not Ready')
-                               } for item in result['items']]
-
-            if search_keyword:
-                metadata_dicts = [result_detail for result_detail in metadata_dicts if
-                                  any(search_keyword.lower() in str(value).lower() for value in result_detail.values())]
-
-                if search_column:
-                    metadata_dicts = [item for item in metadata_dicts if search_keyword.lower()
-                                      in item[search_column].lower()]
-
-            if (sort is not None) and sort_column:
-                metadata_dicts = sorted(metadata_dicts, key=lambda x: x[sort_column], reverse=sort)
-
-            total_result_details = len(metadata_dicts)
-
-            if page_size > 0:
-                start_index = (page_index - 1) * page_size
-                end_index = start_index + page_size
-                metadata_dicts = metadata_dicts[start_index:end_index]
-
-            message = {
-                "total_result_details": total_result_details,
-                "result_details": metadata_dicts,
-            }
-
-            result = {
-                "message": message,
-                "code": 200
-            }
-
-            return result
+            self.get_kserve_client().delete(name=name, namespace=namespace)
+            return None
         except ApiException as e:
             raise KServeApiError(e)
 
-    def infer_model(self, name: str, model_format: str, data: list):
+    def _get_inference_service_list(self, namespace: str = 'kubeflow-user-example-com', parse_json: bool = False):
         try:
-            ingress_url = app_config.ISTIO_INGRESS_HOST
-            host = self.get_inference_service_host(name)
+            i_svc_list = self.get_kserve_client().get(namespace=namespace)
+            if parse_json:
+                return json.loads(json.dumps(i_svc_list))
+            return i_svc_list
+        except ApiException as e:
+            raise KServeApiError(e)
 
-            if host is None:
-                result = {
-                    "code": 404,
-                    "message": "host is not found"
-                }
-                return result
+    def get_inference_service_list(self, page_index: int, page_size: int, search_keyword: str, search_column: str,
+                                   sort: bool, sort_column: str, namespace: str = 'kubeflow-user-example-com'):
+        i_svc_list = self._get_inference_service_list(namespace=namespace, parse_json=True)
+        metadata_dicts = [
+            {'name': self._get_name(item),
+             'modelFormat': self._get_model_format(item),
+             'creationTimestamp': self._get_creation_timestamp(item),
+             'status': self._get_service_status(item, default_value='Not Ready')
+             } for item in i_svc_list['items']
+        ]
 
-            headers = {
-                "Content-Type": "application/json",
-                "Host": host
-            }
-            protocol_version = "v1"
-            inference_url = ""
-            formatted_data = {}
-            if model_format in ["xgboost", "sklearn", "lightgbm", "pmml"]:
-                protocol_version = "v2"
-                inference_url = ingress_url + f"/v2/models/{name}/infer"
-                formatted_data = {
-                    "inputs": [
-                        {
-                            "name": name,
-                            "shape": [len(data), len(data[0])],
-                            "datatype": "FP32",
-                            "data": data
-                        }
-                    ]
-                }
-            elif model_format == "pytorch":
-                protocol_version = "v2"
-                inference_url = ingress_url + f"/v2/models/{re.search(r'-(.*?)-', name).group(1)}/infer"
-                formatted_data = {
-                    "inputs": [
-                        {
-                            "name": name,
-                            "shape": [len(data), len(data[0])],
-                            "datatype": "FP32",
-                            "data": data
-                        }
-                    ]
-                }
-            elif model_format == "tensorflow":
-                protocol_version = "v1"
-                inference_url = ingress_url + f"/v1/models/{name}:predict"
-                formatted_data = {
-                    "instances": [
-                        {
-                            "image_bytes": {
-                                "b64": data
-                            },
-                            "key": "    1"
-                        }
-                    ]
-                }
-            elif model_format == "T5":
-                protocol_version = "v1"
-                inference_url = ingress_url + f"/v1/models/{name}:predict"
-                formatted_data = {
-                    "instances": [
-                        {
-                            "body": {
-                                "model": "t5-small-fid",
-                                "mode": "",
-                                "messages": data
-                            },
-                        }
-                    ]
-                }
+        if search_keyword:
+            metadata_dicts = [result_detail for result_detail in metadata_dicts if
+                              any(search_keyword.lower() in str(value).lower() for value in result_detail.values())]
 
-            inference_response = requests.post(inference_url, json=formatted_data, headers=headers)
-            kserve_result = inference_response.json()
-            # TODO 다른 output 구조의 모델일 경우 계속 json 형식으로 바꿔주는 작업을 안하도록 코드 수정
-            if protocol_version == "v1":
-                kserve_result = kserve_result['predictions']
-            else:
-                kserve_result = kserve_result['outputs'][0]['data']
-            result = {
-                "code": inference_response.status_code,
-                "message": kserve_result
-            }
-            return result
+            if search_column:
+                metadata_dicts = [item for item in metadata_dicts if search_keyword.lower()
+                                  in item[search_column].lower()]
 
-        except Exception as e:
-            return parse_response(e.args)
+        if (sort is not None) and sort_column:
+            metadata_dicts = sorted(metadata_dicts, key=lambda x: x[sort_column], reverse=sort)
 
-    def get_inference_service_host(self, name: str):
-        i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
-        result_detail = json.loads(json.dumps(i_svc_detail))
-        url = result_detail['status'].get('url', None)
-        if url is not None:
-            url = url.replace("http://", "")
-        return url
+        total_result_details = len(metadata_dicts)
 
-    def get_inference_service_detail_url(self, name: str):
-        i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
-        result_detail = json.loads(json.dumps(i_svc_detail))
-        if result_detail['spec']['predictor']['model']['modelFormat']['name'] == "pytorch" and \
-                result_detail['spec']['predictor']['model'].get("protocolVersion", None) is None:
-            result_detail['spec']['predictor']['model']['modelFormat']['name'] = "T5"
-        url = "http://211.39.140.216/kserve/kubeflow-user-example-com/" + name + "/infer?model_format=" + \
-              result_detail['spec']['predictor']['model']['modelFormat']['name']
+        if page_size > 0:
+            start_index = (page_index - 1) * page_size
+            end_index = start_index + page_size
+            metadata_dicts = metadata_dicts[start_index:end_index]
 
-        return url
+        result = {
+            "total_result_details": total_result_details,
+            "result_details": metadata_dicts,
+        }
 
-    def get_inference_service_parse_detail(self, name: str):
-        try:
-            i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
-            result_detail = json.loads(json.dumps(i_svc_detail))
+        return result
 
-            detail_metadata_dicts = {
-                'name': result_detail['metadata']['name'],
-                'overview': {
-                    'info': {
-                        'status': next(
-                            (cond['status'] for cond in result_detail['status'].get('conditions', []) if
-                             cond['type'] == 'Ready')),
-                        'api_url': self.get_inference_service_detail_url(name),
-                        'storage_uri': result_detail['spec']['predictor']['model']['storageUri'],
-                        'model_format': result_detail['spec']['predictor']['model']['modelFormat']['name'],
-                    },
-                    'inference_service_conditions': result_detail['status']['conditions'],
+    @staticmethod
+    def _get_metadata(i_svc_detail):
+        return i_svc_detail['metadata']
+
+    def _get_name(self, i_svc_detail):
+        return self._get_metadata(i_svc_detail)['name']
+
+    def _get_namespace(self, i_svc_detail):
+        return self._get_metadata(i_svc_detail)['namespace']
+
+    def _get_creation_timestamp(self, i_svc_detail):
+        return self._get_metadata(i_svc_detail)['creationTimestamp']
+
+    def _get_annotation(self, i_svc_detail):
+        return self._get_metadata(i_svc_detail).get('annotations',
+                                                    'InferenceService is not ready to receive traffic yet.')
+
+    @staticmethod
+    def _get_status(i_svc_detail):
+        return i_svc_detail['status']
+
+    def _get_conditions(self, i_svc_detail):
+        return self._get_status(i_svc_detail)['conditions']
+
+    def _get_url(self, i_svc_detail):
+        return self._get_status(i_svc_detail).get('url', None)
+
+    def _get_inference_service_host(self, i_svc_detail):
+        url = self._get_url(i_svc_detail)
+        if url is None:
+            return 'InferenceService is not ready to receive traffic yet.'
+        return url.replace("http://", "")
+
+    def _get_service_status(self, i_svc_detail, default_value=None):
+        if default_value is None:
+            return next((cond['status'] for cond in self._get_status(i_svc_detail).get('conditions', []) if
+                         cond['type'] == 'Ready'))
+        return next((cond['status'] for cond in self._get_status(i_svc_detail).get('conditions', []) if
+                     cond['type'] == 'Ready'), default_value)
+
+    @staticmethod
+    def _get_predictor_spec(i_svc_detail):
+        return i_svc_detail['spec']['predictor']
+
+    def _get_service_account(self, i_svc_detail):
+        return self._get_model(i_svc_detail).get('serviceAccountName',
+                                                 'InferenceService is not ready to receive traffic yet.')
+
+    def _get_model(self, i_svc_detail):
+        return self._get_predictor_spec(i_svc_detail)['model']
+
+    def _get_storage_uri(self, i_svc_detail):
+        return self._get_model(i_svc_detail)['storageUri']
+
+    def _get_model_format(self, i_svc_detail):
+        return self._get_model(i_svc_detail)['modelFormat']['name']
+
+    def _get_protocol_version(self, i_svc_detail):
+        return self._get_model(i_svc_detail)['modelFormat'].get("protocolVersion", "v1")
+
+    @staticmethod
+    def convert_inference_service_url(name: str, namespace: str = 'kubeflow-user-example-com'):
+        return f"http://211.39.140.216/kserve/{namespace}/{name}/infer"
+
+    def get_inference_service_parse_detail(self, name: str, namespace: str = 'kubeflow-user-example-com'):
+        i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)
+
+        detail_metadata_dicts = {
+            'name': self._get_name(i_svc_detail),
+            'overview': {
+                'info': {
+                    'status': self._get_service_status(i_svc_detail),
+                    'api_url': self.convert_inference_service_url(name),
+                    'storage_uri': self._get_storage_uri(i_svc_detail),
+                    'model_format': self._get_model_format(i_svc_detail),
                 },
-                'details': {
-                    'info': {
-                        'status': next(
-                            (cond['status'] for cond in result_detail['status'].get('conditions', []) if
-                             cond['type'] == 'Ready')),
-                        'name': result_detail['metadata']['name'],
-                        'namespace': result_detail['metadata']['namespace'],
-                        'url': result_detail['status'].get('url', 'InferenceService is not ready to receive traffic '
-                                                                  'yet.'),
-                        'annotations': result_detail['metadata'].get('annotations', 'InferenceService is not ready to '
-                                                                                    'receive traffic yet.'),
-                        'creation_timestamp': result_detail['metadata']['creationTimestamp'],
-                    },
-                    'predictor_spec': {
-                        'storage_uri': result_detail['spec']['predictor']['model']['storageUri'],
-                        'model_format': result_detail['spec']['predictor']['model']['modelFormat']['name'],
-                        'service_account': result_detail['spec']['predictor'].get('serviceAccountName',
-                                                                                  'InferenceService is not ready to '
-                                                                                  'receive traffic yet.')
-                    }
+                'inference_service_conditions': self._get_conditions(i_svc_detail),
+            },
+            'details': {
+                'info': {
+                    'status': self._get_service_status(i_svc_detail),
+                    'name': self._get_name(i_svc_detail),
+                    'namespace': self._get_namespace(i_svc_detail),
+                    'url': self._get_inference_service_host(i_svc_detail),
+                    'annotations': self._get_annotation(i_svc_detail),
+                    'creation_timestamp': self._get_creation_timestamp(i_svc_detail),
                 },
+                'predictor_spec': {
+                    'storage_uri': self._get_storage_uri(i_svc_detail),
+                    'model_format': self._get_model_format(i_svc_detail),
+                    'service_account': self._get_service_account(i_svc_detail)
+                }
+            },
+        }
+
+        return detail_metadata_dicts
+
+    def get_inference_service_stat(self, name: str, namespace: str = 'kubeflow-user-example-com'):
+        i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)
+        return self._get_service_status(i_svc_detail, 'False')
+
+    def infer_model(self, name: str, data, namespace: str = 'kubeflow-user-example-com'):
+        i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)
+        host = self._get_inference_service_host(i_svc_detail)
+        if host is None:
+            raise KServeException(code=404, message="NOT FOUND", result="host is not found.")
+
+        is_v1 = self._get_protocol_version(i_svc_detail) == "v1"
+
+        if is_v1:
+            url = f"/v1/models/{name}:predict"
+            formatted_data = self._convert_to_v1_form(data)
+        else:
+            url = f"/v2/models/{name}/infer"
+            formatted_data = self._convert_to_v2_form(data)
+
+        inference_result = self._inference(url, host, formatted_data)
+        if is_v1:
+            return inference_result['predictions']
+        return inference_result['outputs'][0]['data']
+
+    def infer_nlp(self, name: str, data: dict, task: str,
+                  namespace: str = 'kubeflow-user-example-com'):
+        data = self.convert_nlp_data(data, task)
+        return self.infer_model(name=name, data=data, namespace=namespace)
+
+    @staticmethod
+    def _inference(url, host, data):
+        inference_url = app_config.ISTIO_INGRESS_HOST + url
+        headers = {
+            "Content-Type": "application/json",
+            "Host": host
+        }
+        inference_response = requests.post(inference_url, json=data, headers=headers)
+        return inference_response.json()
+
+    @staticmethod
+    def _convert_to_v1_form(data):
+        return {
+            "instances": [
+                data
+            ]
+        }
+
+    @staticmethod
+    def _convert_to_v2_form(data):
+        return {
+            "inputs": [
+                {"name": "input",
+                 "shape": [len(data), len(data[0])],
+                 "datatype": "FP32",
+                 "data": data
+                 }
+            ]
+        }
+
+    @staticmethod
+    def convert_nlp_data(data: dict, task: str):
+        formatted_data = None
+        if task == 'smr' or task == 'qa' or task == 'query' or task == 'dst':
+            formatted_data = {
+                "body": data
             }
-
-            result = {
-                "message": detail_metadata_dicts,
-                "code": 200
-            }
-
-            return result
-        except Exception as e:
-            return parse_response(e.args)
-
-    def get_inference_service_stat(self, name: str):
-        try:
-            i_svc_detail = self.get_kserve_client().get(name=name, namespace="kubeflow-user-example-com")
-            result_detail = json.loads(json.dumps(i_svc_detail))
-
-            detail_metadata_dicts = next(
-                (cond['status'] for cond in result_detail['status'].get('conditions', []) if
-                 cond['type'] == 'Ready'), 'False')
-
-            result = {
-                "message": detail_metadata_dicts,
-                "code": 200
-            }
-
-            return result
-        except Exception as e:
-            return parse_response(e.args)
+        return formatted_data
