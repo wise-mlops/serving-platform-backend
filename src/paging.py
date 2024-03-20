@@ -9,7 +9,7 @@ def get_page(data, search_keyword: str, search_column: str, sort: bool, sort_col
                     in str(item[search_column]).lower()]
 
     if (sort is not None) and sort_column:
-        data = sorted(data, key=lambda x: x[sort_column], reverse=sort)
+        data = sorted(data, key=lambda x: (x[sort_column] is None, x[sort_column]), reverse=sort)
 
     total_result_details = len(data)
 
