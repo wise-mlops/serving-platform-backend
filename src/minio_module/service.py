@@ -183,7 +183,7 @@ class MinIOService:
                      search_column: Optional[str] = None,
                      sort: Optional[bool] = None,
                      sort_column: Optional[str] = None):
-        available = self.bucket_exists(bucket_name)
+        self.bucket_exists(bucket_name)
         try:
             object_list = [*self._list_objects(bucket_name, prefix=prefix, recursive=recursive)]
             object_list = [obj.__dict__ for obj in object_list]
@@ -285,7 +285,7 @@ class MinIOService:
             raise MinIOApiError(e)
 
     def stat_object(self, bucket_name: str, object_name: str):
-        available = self.bucket_exists(bucket_name)
+        self.bucket_exists(bucket_name)
         client = self.get_client()
         try:
             result = client.stat_object(bucket_name=bucket_name, object_name=object_name)
