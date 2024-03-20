@@ -10,17 +10,15 @@ from urllib.parse import quote
 
 import requests
 from fastapi import UploadFile
-from minio import Minio, S3Error
+from minio import Minio
+from minio.error import MinioException
 from starlette.responses import StreamingResponse
 
-from src import app_config
+from src.kserve_module import service as kserve_service
 from src.kserve_module.schemas import InferenceServiceInfo
-from src.kserve_module.service import KServeService
-from src.minio_module.exceptions import minio_response
+from src.minio_module.exceptions import MinIOApiError, MinIOException
 from src.minio_module.schemas import BucketInfo, convert_datetime_to_str
-
-my_service = KServeService(app_env=app_config.APP_ENV,
-                           config_path=app_config.CLUSTER_KUBE_CONFIG_PATH)
+from src.paging import get_page
 
 
 class MinIOService:
@@ -33,96 +31,92 @@ class MinIOService:
         self.download_host = download_host if download_host != '' else self.endpoint
 
     def get_client(self):
-        return Minio(endpoint=self.endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=self.secure)
+        try:
+            client = Minio(endpoint=self.endpoint, access_key=self.access_key, secret_key=self.secret_key,
+                           secure=self.secure)
+            return client
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def list_buckets(self, page_index: Optional[int] = None, page_size: Optional[int] = None,
                      search_keyword: Optional[str] = None, search_column: Optional[str] = None,
                      sort: Optional[bool] = None, sort_column: Optional[str] = None):
         client = self.get_client()
-        metadata_dicts = client.list_buckets()
-        bucket_list = [obj.__dict__ for obj in metadata_dicts]
-        for item in bucket_list:
-            item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
+        try:
+            metadata_dicts = client.list_buckets()
+            bucket_list = [obj.__dict__ for obj in metadata_dicts]
+            for item in bucket_list:
+                item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
 
-        if search_keyword:
-            bucket_list = [bucket for bucket in bucket_list if
-                           any(search_keyword.lower() in value.lower() for value in bucket.values())]
+            result = get_page(bucket_list, search_keyword=search_keyword, search_column=search_column, sort=sort,
+                              sort_column=sort_column, page_index=page_index, page_size=page_size)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
 
-            if search_column:
-                bucket_list = [item for item in bucket_list if search_keyword.lower()
-                               in str(item[search_column]).lower()]
-
-        if (sort is not None) and sort_column:
-            bucket_list = sorted(bucket_list, key=lambda x: x[sort_column], reverse=sort)
-
-        total_bucket = len(bucket_list)
-
-        if page_size > 0:
-            start_index = (page_index - 1) * page_size
-            end_index = start_index + page_size
-            bucket_list = bucket_list[start_index:end_index]
-
-        message = {
-            "total_result_details": total_bucket,
-            "result_details": bucket_list,
-        }
-
-        result = {
-            "message": message
-        }
-        return minio_response(result)
+    def _bucket_exists(self, bucket_name: str):
+        client = self.get_client()
+        bucket_name = self.validate_bucket_name(bucket_name)
+        try:
+            result = client.bucket_exists(bucket_name)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
+        except ValueError as e:
+            raise MinIOException(code=400, message="BAD REQUEST",
+                                 result=e.args[0])
 
     def bucket_exists(self, bucket_name: str):
-        client = self.get_client()
-        return minio_response(client.bucket_exists(bucket_name))
+        exists = self._bucket_exists(bucket_name)
+        if not exists:
+            raise MinIOException(code=404, message="NOT FOUND", result=f"Bucket [{bucket_name}] does not exist.")
+        return exists
 
     @staticmethod
     def validate_bucket_name(bucket_name):
         if len(bucket_name) < 3 or len(bucket_name) > 63:
-            raise Exception("Bucket name length should be between 3 and 63 characters.")
+            raise MinIOException(code=400, message="BAD REQUEST",
+                                 result="Bucket name length should be between 3 and 63 characters.")
 
         if not bucket_name[0].isalnum() or not bucket_name[-1].isalnum():
-            raise Exception("Bucket name should start and end with alphanumeric characters.")
+            raise MinIOException(code=400, message="BAD REQUEST",
+                                 result="Bucket name should start and end with alphanumeric characters.")
 
-        if not re.match(r'^[a-z0-9.-]+$', bucket_name):
-            raise Exception("Bucket name should only contain lowercase letters, numbers, dots, and hyphens.")
+        if not re.match(r'^[a-z\d.-]+$', bucket_name):
+            raise MinIOException(code=400, message="BAD REQUEST",
+                                 result="Bucket name should contain lowercase letters, numbers, dots, and hyphens.")
 
         if '..' in bucket_name:
-            raise Exception("Bucket name should not contain consecutive dots.")
+            raise MinIOException(code=400, message="BAD REQUEST",
+                                 result="Bucket name should not contain consecutive dots.")
 
         return bucket_name
 
     def make_bucket(self, bucket_info: BucketInfo):
+        available = not self._bucket_exists(bucket_info.bucket_name)
+        if not available:
+            raise MinIOException(code=409, message="CONFLICT",
+                                 result=f"Bucket [{bucket_info.bucket_name}] already exists.")
+        client = self.get_client()
         try:
-            bucket_name = self.validate_bucket_name(bucket_info.bucket_name)
-            client = self.get_client()
-            available = not client.bucket_exists(bucket_name)
-            if available:
-                client.make_bucket(bucket_name, object_lock=bucket_info.object_lock)
-            elif not available:
-                available = {
-                    "status": available,
-                    "message": "It already"
-                }
-                return minio_response(available, 409)
-            return minio_response(available)
-        except Exception as e:
-            return minio_response(e.args, 400)
+            client.make_bucket(bucket_info.bucket_name, object_lock=bucket_info.object_lock)
+            return available
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def remove_bucket(self, bucket_name: str):
+        available = self.bucket_exists(bucket_name)
+        client = self.get_client()
         try:
-            client = self.get_client()
-            available = client.bucket_exists(bucket_name)
-            if available:
-                client.remove_bucket(bucket_name)
-            return minio_response(available)
-        except S3Error as e:
-            return minio_response(e.message, 400)
+            client.remove_bucket(bucket_name)
+            return available
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def set_bucket_policy(self, bucket_name: str):
+        available = self.bucket_exists(bucket_name)
+        client = self.get_client()
         try:
-            client = self.get_client()
-            available = client.bucket_exists(bucket_name)
             policy = {
                 "Version": "2012-10-17",
                 "Statement": [
@@ -140,41 +134,45 @@ class MinIOService:
                     },
                 ],
             }
-            if available:
-                client.set_bucket_policy(bucket_name, json.dumps(policy))
-            return minio_response(available)
-        except S3Error as e:
-            return minio_response(e.message, 400)
+            client.set_bucket_policy(bucket_name, json.dumps(policy))
+            return available
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def get_bucket_policy(self, bucket_name: str):
+        self.bucket_exists(bucket_name)
+        client = self.get_client()
         try:
-            client = self.get_client()
-            available = client.bucket_exists(bucket_name)
-            if available:
-                return minio_response(client.get_bucket_policy(bucket_name))
-            return minio_response(available)
-        except S3Error as e:
-            return minio_response(e.message, 400)
+            result = client.get_bucket_policy(bucket_name)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def delete_bucket_policy(self, bucket_name: str):
+        available = self.bucket_exists(bucket_name)
+        client = self.get_client()
         try:
-            client = self.get_client()
-            available = client.bucket_exists(bucket_name)
-            if available:
-                client.delete_bucket_policy(bucket_name)
-            return minio_response(available)
-        except S3Error as e:
-            return minio_response(e.message, 400)
+            client.delete_bucket_policy(bucket_name)
+            return available
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def get_bucket_notification(self, bucket_name: str):
+        self.bucket_exists(bucket_name)
+        client = self.get_client()
         try:
-            client = self.get_client()
-            available = client.bucket_exists(bucket_name)
-            if available:
-                return minio_response(client.get_bucket_notification(bucket_name))
-            return minio_response(available)
-        except S3Error as e:
-            return minio_response(e.message, 400)
+            result = client.get_bucket_notification(bucket_name)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
+
+    def _list_objects(self, bucket_name: str, prefix: str, recursive: bool = False):
+        client = self.get_client()
+        try:
+            result = client.list_objects(bucket_name, prefix=prefix, recursive=recursive)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def list_objects(self, bucket_name: str,
                      prefix: Optional[str] = None,
@@ -185,51 +183,30 @@ class MinIOService:
                      search_column: Optional[str] = None,
                      sort: Optional[bool] = None,
                      sort_column: Optional[str] = None):
-        client = self.get_client()
-        object_list = [*client.list_objects(bucket_name, prefix=prefix, recursive=recursive)]
-        object_list = [obj.__dict__ for obj in object_list]
+        available = self.bucket_exists(bucket_name)
+        try:
+            object_list = [*self._list_objects(bucket_name, prefix=prefix, recursive=recursive)]
+            object_list = [obj.__dict__ for obj in object_list]
 
-        for item in object_list:
-            if item['_last_modified'] is not None:
-                item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
-        object_list = [{'_object_name': obj['_object_name'],
-                        '_last_modified': obj['_last_modified'],
-                        '_size': obj['_size']}
-                       for obj in object_list]
+            for item in object_list:
+                if item['_last_modified'] is not None:
+                    item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
+            object_list = [{'_object_name': obj['_object_name'],
+                            '_last_modified': obj['_last_modified'],
+                            '_size': obj['_size']}
+                           for obj in object_list]
 
-        if search_keyword:
-            object_list = [item for item in object_list if
-                           any(search_keyword.lower() in value.lower() for value in str(item.values()).lower())]
-
-            if search_column:
-                object_list = [item for item in object_list if search_keyword.lower()
-                               in str(item[search_column]).lower()]
-
-        if (sort is not None) and sort_column:
-            object_list = sorted(object_list, key=lambda x: (x[sort_column] is None, x[sort_column]),
-                                 reverse=sort)
-
-        total_bucket = len(object_list)
-
-        if page_size > 0:
-            start_index = (page_index - 1) * page_size
-            end_index = start_index + page_size
-            object_list = object_list[start_index:end_index]
-
-        message = {
-            "total_result_details": total_bucket,
-            "result_details": object_list,
-        }
-
-        result = {
-            "message": message
-        }
-
-        return minio_response(result)
+            result = get_page(object_list, search_keyword=search_keyword, search_column=search_column, sort=sort,
+                              sort_column=sort_column, page_index=page_index, page_size=page_size)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def put_objects(self, bucket_name: str, upload_files: List[UploadFile], folder_path: str):
+        self.bucket_exists(bucket_name)
         client = self.get_client()
-        responses = []
+        succeeded = []
+        failed = []
 
         for upload_file in upload_files:
             if folder_path is None:
@@ -238,31 +215,22 @@ class MinIOService:
                 object_name = folder_path + '/' + upload_file.filename
 
             try:
-                client.get_object(bucket_name, object_name)
-                result_error = {
-                    "code": 409,
-                    "message": "Object Already Exists"
-                }
-                responses.append(minio_response(result_error, code=409))
-            except Exception as e:
-                if e:
-                    pass
-                try:
-                    file_size = os.fstat(upload_file.file.fileno()).st_size
-                    client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
-                    object_url = self._get_object_url(bucket_name, object_name, expire_days=7)
-                    responses.append(minio_response(object_url))
-                except Exception as e:
-                    responses.append(minio_response(e.args, code=400))
+                file_size = os.fstat(upload_file.file.fileno()).st_size
+                client.put_object(bucket_name, object_name=object_name, data=upload_file.file, length=file_size)
+                object_url = self._get_object_url(bucket_name, object_name, expire_days=7)
+                succeeded.append(object_url)
+            except MinioException:
+                failed.append(object_name)
+
         result = {
-            "code": 200,
-            "message": [response["message"] for response in responses]
+            "succeeded": succeeded,
+            "failed": failed
         }
         return result
 
     def _add_folder_to_zip(self, zip_file: zipfile.ZipFile, bucket_name: str, folder_name: str):
         item_list = self.list_objects(bucket_name=bucket_name, prefix=folder_name, recursive=True)
-        item_list = item_list['message']['message']['result_details']
+        item_list = item_list['result_details']
         for item in item_list:
             object_item = item['_object_name']
             if object_item.endswith('/'):
@@ -308,21 +276,43 @@ class MinIOService:
 
     def fput_object(self, bucket_name: str,
                     object_name: str, file_path: str):
+        self.bucket_exists(bucket_name)
         client = self.get_client()
-        return minio_response(client.fput_object(bucket_name, object_name,
-                                                 file_path))
+        try:
+            result = client.fput_object(bucket_name, object_name, file_path)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def stat_object(self, bucket_name: str, object_name: str):
+        available = self.bucket_exists(bucket_name)
         client = self.get_client()
-        return minio_response(client.stat_object(bucket_name=bucket_name, object_name=object_name))
+        try:
+            result = client.stat_object(bucket_name=bucket_name, object_name=object_name)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def remove_objects(self, bucket_name: str, object_names: List[str]):
+        self.bucket_exists(bucket_name)
         client = self.get_client()
+        succeeded = []
+        failed = []
         for object_name in object_names:
-            objects = client.list_objects(bucket_name, prefix=object_name, recursive=True)
+            objects = self._list_objects(bucket_name, prefix=object_name, recursive=True)
             for obj in objects:
-                client.remove_object(bucket_name, obj.object_name)
-        return minio_response("success")
+                try:
+                    client.remove_object(bucket_name, obj.object_name)
+                    succeeded.append(obj.object_name)
+                except MinioException:
+                    failed.append(obj.object_name)
+
+        result = {
+            "succeeded": succeeded,
+            "failed": failed
+        }
+
+        return result
 
     def _get_object_url(self, bucket_name: str, object_name: str, expire_days: int = 7, object_version_id: str = None):
         client = self.get_client()
@@ -334,9 +324,13 @@ class MinIOService:
 
     def presigned_get_object(self, bucket_name: str, object_name: str, expire_days: Optional[int] = None,
                              version_id: Optional[str] = None):
-        return minio_response(self._get_object_url(bucket_name=bucket_name, object_name=object_name,
-                                                   expire_days=expire_days,
-                                                   object_version_id=version_id))
+        try:
+            result = self._get_object_url(bucket_name=bucket_name, object_name=object_name,
+                                          expire_days=expire_days,
+                                          object_version_id=version_id)
+            return result
+        except MinioException as e:
+            raise MinIOApiError(e)
 
     def put_object_serving(self, bucket_name: str, model_format: str, upload_file: UploadFile,
                            service_name: str):
@@ -383,4 +377,4 @@ class MinIOService:
             serving_text = serving_text.replace("/{{service_name}}", '/' + filename_to_use)
         serving_text = serving_text.replace("{{bucket_name}}", bucket_name)
         serving_text = serving_text.replace("{{service_name}}", service_name)
-        return my_service.create_inference_service(InferenceServiceInfo(**json.loads(serving_text)))
+        return kserve_service.create_inference_service(InferenceServiceInfo(**json.loads(serving_text)))

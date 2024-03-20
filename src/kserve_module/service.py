@@ -11,6 +11,7 @@ from src import app_config
 from src.kserve_module.exceptions import KServeApiError, KServeException
 from src.kserve_module.schemas import PredictorSpec, Resource, ResourceRequirements, ModelSpec, ModelFormat, \
     InferenceServiceSpec, InferenceServiceInfo, TransformerSpec, Port, Logger, Env, Toleration, Container, Batcher
+from src.paging import get_page
 
 
 class KServeService:
@@ -327,32 +328,12 @@ class KServeService:
             {'name': self._get_name(item),
              'modelFormat': self._get_model_format(item),
              'creationTimestamp': self._get_creation_timestamp(item),
-             'status': self._get_service_status(item, default_value='Not Ready')
+             'status': self._get_service_status(item)
              } for item in i_svc_list['items']
         ]
 
-        if search_keyword:
-            metadata_dicts = [result_detail for result_detail in metadata_dicts if
-                              any(search_keyword.lower() in str(value).lower() for value in result_detail.values())]
-
-            if search_column:
-                metadata_dicts = [item for item in metadata_dicts if search_keyword.lower()
-                                  in item[search_column].lower()]
-
-        if (sort is not None) and sort_column:
-            metadata_dicts = sorted(metadata_dicts, key=lambda x: x[sort_column], reverse=sort)
-
-        total_result_details = len(metadata_dicts)
-
-        if page_size > 0:
-            start_index = (page_index - 1) * page_size
-            end_index = start_index + page_size
-            metadata_dicts = metadata_dicts[start_index:end_index]
-
-        result = {
-            "total_result_details": total_result_details,
-            "result_details": metadata_dicts,
-        }
+        result = get_page(metadata_dicts, search_keyword=search_keyword, search_column=search_column, sort=sort,
+                          sort_column=sort_column, page_index=page_index, page_size=page_size)
 
         return result
 
@@ -389,12 +370,9 @@ class KServeService:
             return 'InferenceService is not ready to receive traffic yet.'
         return url.replace("http://", "")
 
-    def _get_service_status(self, i_svc_detail, default_value=None):
-        if default_value is None:
-            return next((cond['status'] for cond in self._get_status(i_svc_detail).get('conditions', []) if
-                         cond['type'] == 'Ready'))
+    def _get_service_status(self, i_svc_detail):
         return next((cond['status'] for cond in self._get_status(i_svc_detail).get('conditions', []) if
-                     cond['type'] == 'Ready'), default_value)
+                     cond['type'] == 'Ready'), 'False')
 
     @staticmethod
     def _get_predictor_spec(i_svc_detail):
@@ -455,7 +433,7 @@ class KServeService:
 
     def get_inference_service_stat(self, name: str, namespace: str = 'kubeflow-user-example-com'):
         i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)
-        return self._get_service_status(i_svc_detail, 'False')
+        return self._get_service_status(i_svc_detail)
 
     def infer_model(self, name: str, data, namespace: str = 'kubeflow-user-example-com'):
         i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)

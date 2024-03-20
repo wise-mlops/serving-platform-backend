@@ -1,6 +1,6 @@
 import json
 
-from minio.error import MinioException
+from minio.error import MinioException, S3Error
 from starlette import status
 
 from src.minio_module.config import MODULE_CODE
@@ -8,7 +8,7 @@ from src.minio_module.config import MODULE_CODE
 
 class MinIOException(Exception):
     def __init__(self, code: int, message: str, result):
-        self.code = code
+        self.code = int(f"{MODULE_CODE}{code}")
         self.message = message
         self.result = result
 
@@ -27,10 +27,7 @@ class MinIOApiError(MinIOException):
         self.message = "minioException"
         self.result = e.args
 
-
-def minio_response(response, code=200):
-    result = {
-        "code": code,
-        "message": response
-    }
-    return result
+        if isinstance(e, S3Error):
+            self.code = int(f"{MODULE_CODE}{e.response.status}")
+            self.message = e.code
+            self.result = e.message
