@@ -32,15 +32,11 @@ class KServeService:
             return None
         cpu = resource.cpu
         if cpu is not None:
-            cpu = cpu.strip()
-            if cpu.endswith("m"):
-                resource_dict["cpu"] = cpu
+            resource_dict["cpu"] = cpu.strip()
 
         memory = resource.memory
         if memory is not None:
-            memory = memory.strip()
-            if memory.endswith("Gi"):
-                resource_dict["memory"] = memory
+            resource_dict["memory"] = memory.strip()
 
         gpu = resource.gpu
         if gpu is not None and gpu > 0:
@@ -396,7 +392,7 @@ class KServeService:
 
     @staticmethod
     def convert_inference_service_url(name: str, namespace: str = 'kubeflow-user-example-com'):
-        return f"http://211.39.140.216/kserve/{namespace}/{name}/infer"
+        return f"http://211.39.140.216/kserve/{name}/infer"
 
     def get_inference_service_parse_detail(self, name: str, namespace: str = 'kubeflow-user-example-com'):
         i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)
