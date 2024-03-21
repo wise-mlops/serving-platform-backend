@@ -16,13 +16,13 @@ router = APIRouter(
 
 
 @router.get("", tags=["bucket"], response_model=Response)
-async def list_buckets(page_index: Optional[int] = Query(default=1, description='페이지 번호 설정'),
-                       page_size: Optional[int] = Query(default=6, description='한 페이지마다 객체 수 설정'
-                                                                               '(0 이하 값이면 페이징 처리 X)'),
-                       search_keyword: Optional[str] = Query(default=None, description='검색 키워드 설정'),
-                       search_column: Optional[str] = Query(default=None, description='속성 검색 설정'),
-                       sort: Optional[bool] = Query(default=True, description='True 내림차순, False 오름차순'),
-                       sort_column: Optional[str] = Query(default='_creation_date', description='정렬 기준 속성 설정')):
+def list_buckets(page_index: Optional[int] = Query(default=1, description='페이지 번호 설정'),
+                 page_size: Optional[int] = Query(default=6, description='한 페이지마다 객체 수 설정'
+                                                                         '(0 이하 값이면 페이징 처리 X)'),
+                 search_keyword: Optional[str] = Query(default=None, description='검색 키워드 설정'),
+                 search_column: Optional[str] = Query(default=None, description='속성 검색 설정'),
+                 sort: Optional[bool] = Query(default=True, description='True 내림차순, False 오름차순'),
+                 sort_column: Optional[str] = Query(default='_creation_date', description='정렬 기준 속성 설정')):
     """
     bucket list를 출력합니다.
     """
@@ -31,7 +31,7 @@ async def list_buckets(page_index: Optional[int] = Query(default=1, description=
 
 
 @router.post("", tags=["bucket"], response_model=Response)
-async def make_bucket(bucket_info: BucketInfo):
+def make_bucket(bucket_info: BucketInfo):
     """
     bucket을 생성합니다.\n
         - object_lock은 객체를 보안하는 설정입니다. (수정, 삭제 등 불가)
@@ -40,7 +40,7 @@ async def make_bucket(bucket_info: BucketInfo):
 
 
 @router.get("/{bucket_name}", tags=["bucket"], response_model=Response)
-async def bucket_exists(bucket_name: str = Path(..., description='bucket의 이름 설정')):
+def bucket_exists(bucket_name: str = Path(..., description='bucket의 이름 설정')):
     """
     bucket의 존재 여부를 확인합니다.
     """
@@ -48,7 +48,7 @@ async def bucket_exists(bucket_name: str = Path(..., description='bucket의 이�
 
 
 @router.delete("/{bucket_name}", tags=["bucket"], response_model=Response)
-async def remove_bucket(bucket_name: str = Path(..., description='bucket의 이름 설정')):
+def remove_bucket(bucket_name: str = Path(..., description='bucket의 이름 설정')):
     """
     bucket을 삭제합니다.
     """
@@ -56,7 +56,7 @@ async def remove_bucket(bucket_name: str = Path(..., description='bucket의 이�
 
 
 @router.post("/{bucket_name}/policy", tags=["bucket"], response_model=Response)
-async def set_bucket_policy(bucket_name: str = Path(..., description='bucket의 이름 설정')):
+def set_bucket_policy(bucket_name: str = Path(..., description='bucket의 이름 설정')):
     """
     bucket의 접근 제어를 설정합니다.
     """
@@ -64,7 +64,7 @@ async def set_bucket_policy(bucket_name: str = Path(..., description='bucket의 
 
 
 @router.get("/{bucket_name}/policy", tags=["bucket"], response_model=Response)
-async def get_bucket_policy(bucket_name: str = Path(..., description='bucket의 이름 설정')):
+def get_bucket_policy(bucket_name: str = Path(..., description='bucket의 이름 설정')):
     """
     bucket의 접근 제어를 조회합니다.
     """
@@ -72,7 +72,7 @@ async def get_bucket_policy(bucket_name: str = Path(..., description='bucket의 
 
 
 @router.delete("/{bucket_name}/policy", tags=["bucket"], response_model=Response)
-async def delete_bucket_policy(bucket_name: str = Path(..., description='bucket의 이름 설정')):
+def delete_bucket_policy(bucket_name: str = Path(..., description='bucket의 이름 설정')):
     """
     bucket의 접근 제어를 삭제합니다.
     """
@@ -80,16 +80,16 @@ async def delete_bucket_policy(bucket_name: str = Path(..., description='bucket�
 
 
 @router.get("/object/{bucket_name}", tags=["object"], response_model=Response)
-async def list_objects(bucket_name: str = Path(..., description='bucket의 이름 설정'),
-                       prefix: Optional[str] = Query(None, description='객체 경로 고정값 설정'),
-                       recursive: bool = Query(False, description='True 모든 하위 폴더 및 파일 조회, False 직계 하위 폴더만 조회'),
-                       page_index: Optional[int] = Query(default=1, description='페이지 번호 설정'),
-                       page_size: Optional[int] = Query(default=10, description='한 페이지마다 객체 수 설정'
-                                                                                '(0 이하 값이면 페이징 처리 X)'),
-                       search_keyword: Optional[str] = Query(default=None, description='검색 키워드 설정'),
-                       search_column: Optional[str] = Query(default=None, description='속성 검색 설정'),
-                       sort: Optional[bool] = Query(default=True, description='True 내림차순, False 오름차순'),
-                       sort_column: Optional[str] = Query(default='_last_modified', description='정렬 기준 속성 설정')):
+def list_objects(bucket_name: str = Path(..., description='bucket의 이름 설정'),
+                 prefix: Optional[str] = Query(None, description='객체 경로 고정값 설정'),
+                 recursive: bool = Query(False, description='True 모든 하위 폴더 및 파일 조회, False 직계 하위 폴더만 조회'),
+                 page_index: Optional[int] = Query(default=1, description='페이지 번호 설정'),
+                 page_size: Optional[int] = Query(default=10, description='한 페이지마다 객체 수 설정'
+                                                                          '(0 이하 값이면 페이징 처리 X)'),
+                 search_keyword: Optional[str] = Query(default=None, description='검색 키워드 설정'),
+                 search_column: Optional[str] = Query(default=None, description='속성 검색 설정'),
+                 sort: Optional[bool] = Query(default=True, description='True 내림차순, False 오름차순'),
+                 sort_column: Optional[str] = Query(default='_last_modified', description='정렬 기준 속성 설정')):
     """
     bucket의 하위 폴더 및 파일의 리스트를 조회합니다.
     """

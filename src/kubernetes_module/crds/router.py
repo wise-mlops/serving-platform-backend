@@ -14,25 +14,25 @@ router = APIRouter(
 
 
 @router.get("/namespaces/{namespace}/notebooks", tags=["notebook"], response_model=Response)
-async def get_notebooks(namespace: str):
+def get_notebooks(namespace: str):
     return Response.from_result(MODULE_CODE, crd_service.get_notebooks(namespace))
 
 
 @router.post("/namespaces/{namespace}/notebooks", tags=["notebook"], response_model=Response)
-async def create_notebook(namespace: str, notebook: Notebook = None):
+def create_notebook(namespace: str, notebook: Notebook = None):
     return Response.from_result(MODULE_CODE, crd_service.create_notebook(namespace, notebook))
 
 
 @router.delete("/namespaces/{namespace}/notebooks/{name}", tags=["notebook"], response_model=Response)
-async def delete_notebook(namespace: str, name: str = ''):
+def delete_notebook(namespace: str, name: str = ''):
     return Response.from_result(MODULE_CODE, crd_service.delete_notebook(namespace, name))
 
 
 @router.get("/namespaces/{namespace}/notebooks/{name}", tags=["notebook"], response_model=Response)
-async def get_notebook(namespace: str, name: str):
+def get_notebook(namespace: str, name: str):
     return Response.from_result(MODULE_CODE, crd_service.get_notebook(namespace, name))
 
 
 @router.get("/namespaces/{namespace}/notebooks/{name}/overview", tags=["notebook"], response_model=Response)
-async def get_notebook_overview(namespace: str, name: str):
+def get_notebook_overview(namespace: str, name: str):
     return Response.from_result(MODULE_CODE, crd_service.get_notebook_overview(namespace, name))

@@ -1,20 +1,21 @@
 import logging
 import os
 import sys
+
 from fastapi import FastAPI, Request
-from starlette.responses import JSONResponse
-from uvicorn import Config, Server
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
+from uvicorn import Config, Server
 
 from src.config import DESCRIPTION
-from src.minio_module import router as minio_router
-from src.minio_module.exceptions import MinIOException
 from src.kserve_module import router as kserve_router
 from src.kserve_module.exceptions import KServeException
 from src.kubernetes_module.cluster import router as cluster_router
 from src.kubernetes_module.crds import router as crd_router
 from src.kubernetes_module.exceptions import KubernetesException
+from src.minio_module import router as minio_router
+from src.minio_module.exceptions import MinIOException
 
 LOG_LEVEL = logging.getLevelName(os.environ.get("LOG_LEVEL", "DEBUG"))
 JSON_LOGS = True if os.environ.get("JSON_LOGS", "0") == "1" else False
@@ -65,21 +66,22 @@ app.include_router(kserve_router.router)
 
 
 @app.exception_handler(MinIOException)
-async def minio_exception_handler(request: Request, exc: MinIOException):
+def minio_exception_handler(request: Request, exc: MinIOException):
     return JSONResponse(status_code=200,
                         content={"code": exc.code, "message": exc.message, "result": exc.result})
 
 
 @app.exception_handler(KServeException)
-async def kserve_exception_handler(request: Request, exc: KServeException):
+def kserve_exception_handler(request: Request, exc: KServeException):
     return JSONResponse(status_code=200,
                         content={"code": exc.code, "message": exc.message, "result": exc.result})
 
 
 @app.exception_handler(KubernetesException)
-async def kubernetes_exception_handler(request: Request, exc: KubernetesException):
+def kubernetes_exception_handler(request: Request, exc: KubernetesException):
     return JSONResponse(status_code=200,
                         content={"code": exc.code, "message": exc.message, "result": exc.result})
+
 
 origins = [
     "*",

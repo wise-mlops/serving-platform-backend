@@ -17,7 +17,7 @@ router = APIRouter(
 
 
 @router.post("", response_model=Response)
-async def create_inference_service(inference_service_info: InferenceServiceInfo):
+def create_inference_service(inference_service_info: InferenceServiceInfo):
     """
     inference service 만들기\n
         - model format 확인\n
@@ -30,7 +30,7 @@ async def create_inference_service(inference_service_info: InferenceServiceInfo)
 
 
 @router.patch("", response_model=Response)
-async def patch_inference_service(inference_service_info: InferenceServiceInfo):
+def patch_inference_service(inference_service_info: InferenceServiceInfo):
     """
     inference service 수정\n
     추후 협의
@@ -40,7 +40,7 @@ async def patch_inference_service(inference_service_info: InferenceServiceInfo):
 
 
 @router.put("", response_model=Response)
-async def replace_inference_service(inference_service_info: InferenceServiceInfo):
+def replace_inference_service(inference_service_info: InferenceServiceInfo):
     """
     inference service 수정\n
     추후 협의
@@ -50,7 +50,7 @@ async def replace_inference_service(inference_service_info: InferenceServiceInfo
 
 
 @router.delete("/{name}", response_model=Response)
-async def delete_inference_service(name: str = Path(..., description='inference service명 설정')):
+def delete_inference_service(name: str = Path(..., description='inference service명 설정')):
     """
     특정 inference service 제거
     """
@@ -58,7 +58,7 @@ async def delete_inference_service(name: str = Path(..., description='inference 
 
 
 @router.get("/{name}", response_model=Response)
-async def get_inference_service(name: str = Path(..., description='inference service명 설정')):
+def get_inference_service(name: str = Path(..., description='inference service명 설정')):
     """
     특정 inference service의 모든 정보를 받아 볼 수 있습니다.
     """
@@ -66,14 +66,14 @@ async def get_inference_service(name: str = Path(..., description='inference ser
 
 
 @router.get("", response_model=Response)
-async def get_inference_service_list(page_index: Optional[int] = Query(default=1, description='페이지 번호 설정'),
-                                     page_size: Optional[int] = Query(default=10, description='한 페이지마다 객체 수 설정'
-                                                                                              '(0 이하 값이면 페이징 처리 X)'),
-                                     search_keyword: Optional[str] = Query(default=None, description='검색 키워드 설정'),
-                                     search_column: Optional[str] = Query(default=None, description='속성 검색 설정'),
-                                     sort: Optional[bool] = Query(default=True, description='True 내림차순, False 오름차순'),
-                                     sort_column: Optional[str] = Query(default='creationTimestamp',
-                                                                        description='정렬 기준 속성 설정')):
+def get_inference_service_list(page_index: Optional[int] = Query(default=1, description='페이지 번호 설정'),
+                               page_size: Optional[int] = Query(default=10, description='한 페이지마다 객체 수 설정'
+                                                                                        '(0 이하 값이면 페이징 처리 X)'),
+                               search_keyword: Optional[str] = Query(default=None, description='검색 키워드 설정'),
+                               search_column: Optional[str] = Query(default=None, description='속성 검색 설정'),
+                               sort: Optional[bool] = Query(default=True, description='True 내림차순, False 오름차순'),
+                               sort_column: Optional[str] = Query(default='creationTimestamp',
+                                                                  description='정렬 기준 속성 설정')):
     """
     inference service list를 출력합니다.
     """
@@ -82,9 +82,9 @@ async def get_inference_service_list(page_index: Optional[int] = Query(default=1
                                                                    search_column, sort, sort_column))
 
 
-@router.post("/{namespace}/{name}/infer", response_model=Response)
-async def infer_model(name: str = Path(..., description='inference service의 모델명 설정'),
-                      data: list = Body(..., description='테스트 포맷에 맞게 input값을 설정')):
+@router.post("/{name}/infer", response_model=Response)
+def infer_model(name: str = Path(..., description='inference service의 모델명 설정'),
+                data: list = Body(..., description='테스트 포맷에 맞게 input값을 설정')):
     """
     inference service를 통해 모델을 테스트 해볼 수 있습니다.\n
         - input값은 각 포맷에 맞게 입력시 output을 받아볼 수 있습니다.
@@ -92,10 +92,10 @@ async def infer_model(name: str = Path(..., description='inference service의 �
     return Response.from_result(MODULE_CODE, service.infer_model(name=name, data=data))
 
 
-@router.post("/{namespace}/{name}/infer/{task}", response_model=Response)
-async def infer_nlp(name: str = Path(..., description='inference service의 모델명 설정'),
-                    task: str = Path(..., description='nlp task 설정 (ex. smr, qa, query, dst'),
-                    data: dict = Body(..., description='테스트 포맷에 맞게 input값을 설정')):
+@router.post("/{name}/infer/{task}", response_model=Response)
+def infer_nlp(name: str = Path(..., description='inference service의 모델명 설정'),
+              task: str = Path(..., description='nlp task 설정 (ex. smr, qa, query, dst'),
+              data: dict = Body(..., description='테스트 포맷에 맞게 input값을 설정')):
     """
     inference service를 통해 모델을 테스트 해볼 수 있습니다.\n
         - input값은 각 포맷에 맞게 입력시 output을 받아볼 수 있습니다.
@@ -104,7 +104,7 @@ async def infer_nlp(name: str = Path(..., description='inference service의 모�
 
 
 @router.get("/detail/{name}", response_model=Response)
-async def get_inference_service_parse_detail(name: str = Path(..., description='inference service명 설정')):
+def get_inference_service_parse_detail(name: str = Path(..., description='inference service명 설정')):
     """
     특정 inference service의 필요한 정보를 받아 볼 수 있습니다.
     """
@@ -112,7 +112,7 @@ async def get_inference_service_parse_detail(name: str = Path(..., description='
 
 
 @router.get("/stat/{name}", response_model=Response)
-async def get_inference_service_stat(name: str = Path(..., description='inference service명 설정')):
+def get_inference_service_stat(name: str = Path(..., description='inference service명 설정')):
     """
     같은 이름의 infernece service가 있는지 확인 할 수 있습니다.
     """
