@@ -431,7 +431,7 @@ class KServeService:
         i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)
         return self._get_service_status(i_svc_detail)
 
-    def infer_model(self, name: str, data, namespace: str = 'kubeflow-user-example-com'):
+    def infer_model(self, name: str, data, namespace: str = 'kubeflow-user-example-com', multi: bool = False):
         i_svc_detail = self.get_inference_service(name=name, namespace=namespace, parse_json=True)
         host = self._get_inference_service_host(i_svc_detail)
         if host is None:
@@ -441,10 +441,10 @@ class KServeService:
 
         if is_v1:
             url = f"/v1/models/{name}:predict"
-            formatted_data = self._convert_to_v1_form(data)
+            formatted_data = self._convert_to_v1_form(data, multi=multi)
         else:
             url = f"/v2/models/{name}/infer"
-            formatted_data = self._convert_to_v2_form(data)
+            formatted_data = self._convert_to_v2_form(data, multi=multi)
 
         inference_result = self._inference(url, host, formatted_data)
         if is_v1:
@@ -467,7 +467,11 @@ class KServeService:
         return inference_response.json()
 
     @staticmethod
-    def _convert_to_v1_form(data):
+    def _convert_to_v1_form(data, multi: bool = False):
+        if multi:
+            return {
+                "instances": data
+            }
         return {
             "instances": [
                 data
@@ -475,14 +479,25 @@ class KServeService:
         }
 
     @staticmethod
-    def _convert_to_v2_form(data):
+    def _convert_to_v2_form(data, multi: bool = False):
+        if multi:
+            inputs = list()
+            for i, d in enumerate(data):
+                inputs.append({
+                    "name": f"input_{i}",
+                    "shape": [len(d), len(d[0])],
+                    "datatype": "FP32",
+                    "data": d
+                })
+            return inputs
         return {
             "inputs": [
-                {"name": "input",
-                 "shape": [len(data), len(data[0])],
-                 "datatype": "FP32",
-                 "data": data
-                 }
+                {
+                    "name": "input",
+                    "shape": [len(data), len(data[0])],
+                    "datatype": "FP32",
+                    "data": data
+                }
             ]
         }
 

@@ -84,12 +84,13 @@ def get_inference_service_list(page_index: Optional[int] = Query(default=1, desc
 
 @router.post("/{name}/infer", response_model=Response)
 def infer_model(name: str = Path(..., description='inference service의 모델명 설정'),
-                data: list = Body(..., description='테스트 포맷에 맞게 input값을 설정')):
+                data: list = Body(..., description='테스트 포맷에 맞게 input값을 설정'),
+                multi: Optional[bool] = Query(default=True, description='true 다중 데이터 처리, false 단일 데이터 처리')):
     """
     inference service를 통해 모델을 테스트 해볼 수 있습니다.\n
         - input값은 각 포맷에 맞게 입력시 output을 받아볼 수 있습니다.
     """
-    return Response.from_result(MODULE_CODE, service.infer_model(name=name, data=data))
+    return Response.from_result(MODULE_CODE, service.infer_model(name=name, data=data, multi=multi))
 
 
 @router.post("/{name}/infer/{task}", response_model=Response)
