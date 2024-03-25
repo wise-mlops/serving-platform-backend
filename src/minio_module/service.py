@@ -1,5 +1,6 @@
 import io
 import json
+import math
 import os
 import re
 import zipfile
@@ -17,7 +18,7 @@ from starlette.responses import StreamingResponse
 from src.kserve_module import service as kserve_service
 from src.kserve_module.schemas import InferenceServiceInfo
 from src.minio_module.exceptions import MinIOApiError, MinIOException
-from src.minio_module.schemas import BucketInfo, convert_datetime_to_str
+from src.minio_module.schemas import BucketInfo
 from src.paging import get_page
 
 
@@ -37,15 +38,33 @@ class MinIOService:
         except MinioException as e:
             raise MinIOApiError(e)
 
+    @staticmethod
+    def convert_datetime_to_str(datetime_obj):
+        if datetime_obj is not None:
+            return datetime_obj.strftime('%Y-%m-%d %H:%M:%S')
+        return datetime_obj
+
+    @staticmethod
+    def convert_size(size_bytes):
+        if size_bytes is not None and size_bytes > 0:
+            # 바이트 단위를 다른 단위로 변환
+            # 1 KiB = 1024 바이트, 1 MiB = 1024 KiB, 1 GiB = 1024 MiB
+            size_name = ("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB")
+            i = int(math.floor(math.log(size_bytes, 1024)))
+            p = math.pow(1024, i)
+            s = round(size_bytes / p, 1)
+            return "%s %s" % (s, size_name[i])
+        return size_bytes
+
     def list_buckets(self, page_index: Optional[int] = None, page_size: Optional[int] = None,
                      search_keyword: Optional[str] = None, search_column: Optional[str] = None,
                      sort: Optional[bool] = None, sort_column: Optional[str] = None):
         client = self.get_client()
         try:
-            metadata_dicts = client.list_buckets()
-            bucket_list = [obj.__dict__ for obj in metadata_dicts]
-            for item in bucket_list:
-                item['_creation_date'] = convert_datetime_to_str(item['_creation_date'])
+            bucket_list = [
+                {**obj.__dict__, '_creation_date': self.convert_datetime_to_str(obj.creation_date)}
+                for obj in client.list_buckets()
+            ]
 
             result = get_page(bucket_list, search_keyword=search_keyword, search_column=search_column, sort=sort,
                               sort_column=sort_column, page_index=page_index, page_size=page_size)
@@ -169,7 +188,7 @@ class MinIOService:
         client = self.get_client()
         try:
             result = client.list_objects(bucket_name, prefix=prefix, recursive=recursive)
-            return result
+            return [*result]
         except MinioException as e:
             raise MinIOApiError(e)
 
@@ -184,16 +203,14 @@ class MinIOService:
                      sort_column: Optional[str] = None):
         self.bucket_exists(bucket_name)
         try:
-            object_list = [*self._list_objects(bucket_name, prefix=prefix, recursive=recursive)]
-            object_list = [obj.__dict__ for obj in object_list]
-
-            for item in object_list:
-                if item['_last_modified'] is not None:
-                    item['_last_modified'] = convert_datetime_to_str(item['_last_modified'])
-            object_list = [{'_object_name': obj['_object_name'],
-                            '_last_modified': obj['_last_modified'],
-                            '_size': obj['_size']}
-                           for obj in object_list]
+            object_list = [
+                {
+                    '_object_name': obj.object_name,
+                    '_last_modified': self.convert_datetime_to_str(obj.last_modified),
+                    '_size': self.convert_size(obj.size)
+                }
+                for obj in self._list_objects(bucket_name, prefix=prefix, recursive=recursive)
+            ]
 
             result = get_page(object_list, search_keyword=search_keyword, search_column=search_column, sort=sort,
                               sort_column=sort_column, page_index=page_index, page_size=page_size)
