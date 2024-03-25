@@ -22,13 +22,12 @@ from src.paging import get_page
 
 
 class MinIOService:
-    def __init__(self, endpoint, access_key, secret_key, download_host=''):
+    def __init__(self, endpoint, access_key, secret_key):
         endpoint_split = endpoint.split("://")
         self.endpoint = endpoint_split[-1]
         self.access_key = access_key
         self.secret_key = secret_key
         self.secure = True if endpoint_split[0] == "https" else False
-        self.download_host = download_host if download_host != '' else self.endpoint
 
     def get_client(self):
         try:
