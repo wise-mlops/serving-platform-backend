@@ -74,7 +74,7 @@ class ModelSpec(BaseModel):
 
 class PredictorSpec(BaseModel):
     model_spec: ModelSpec
-    service_account_name: str = 'kserve-sa'
+    service_account_name: str = 'storage-system-minio-sa'
     node_selector: Optional[Dict[str, str]] = None
     timeout: Optional[int] = None
     min_replicas: Optional[int] = None
@@ -128,7 +128,7 @@ class InferenceServiceInfo(BaseModel):
                                 "name": "pytorch"
                             }
                         },
-                        "service_account_name": "kserve-sa"
+                        "service_account_name": "storage-system-minio-sa"
                     }
                 },
                 "sidecar_inject": "false"
