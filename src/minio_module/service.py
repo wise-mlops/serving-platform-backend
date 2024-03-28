@@ -377,7 +377,6 @@ class MinIOService:
     "predictor": {
       "model_spec": {
         "storage_uri": "s3://{{bucket_name}}/{{service_name}}",
-        "protocolVersion": "v2",
         "model_format": {
           "name": "{{model_format}}"
         }
