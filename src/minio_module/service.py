@@ -359,10 +359,12 @@ class MinIOService:
                     tmp_file.write(upload_file.file.read())
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                     for filename in zip_ref.namelist():
-                        with zip_ref.open(filename) as extracted_file:
-                            data = extracted_file.read()
-                            client.put_object(bucket_name, object_name=filename, data=io.BytesIO(data),
-                                              length=len(data))
+                        if not filename.endswith('/'):
+                            with zip_ref.open(filename) as extracted_file:
+                                data = extracted_file.read()
+                                object_name = "/".join([os.path.basename(zip_path).replace(".zip", ""), filename])
+                                client.put_object(bucket_name, object_name=object_name, data=io.BytesIO(data),
+                                                  length=len(data))
         else:
             object_name = f'{service_name}/{upload_file.filename}'
             client.put_object(bucket_name, object_name=object_name, data=upload_file.file,
