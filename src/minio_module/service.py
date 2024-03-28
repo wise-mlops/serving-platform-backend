@@ -381,7 +381,7 @@ class MinIOService:
           "name": "{{model_format}}"
         }
       },
-      "service_account_name": "kserve-sa"
+      "service_account_name": "storage-system-minio-sa"
     }
   },
   "sidecar_inject": false
