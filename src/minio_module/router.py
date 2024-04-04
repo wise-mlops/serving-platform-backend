@@ -123,12 +123,13 @@ def stat_object(bucket_name: str = Path(..., description='bucket의 이름 설�
 
 @router.get("/object/{bucket_name}/download", tags=["object"])
 def fget_object(bucket_name: str = Path(..., description='bucket의 이름 설정'),
-                object_names: List[str] = Query(..., description='다운로드 할 파일명 설정')):
+                object_names: List[str] = Query(None, description='다운로드 할 파일명 설정')):
     """
     파일을 다운로드 합니다.\n
         - 여러개의 파일과 폴더는 zip 파일로 다운로드.\n
         - 폴더 다운로드는 '폴더명/' 와 같이 기입\n
-        - object_name은 폴더 경로까지 같이 작성
+        - object_name은 폴더 경로까지 같이 작성\n
+        - object_name이 None일 경우 bucket에 있는 모든 객체 zip 파일로 다운로드
     """
     return service.fget_object(bucket_name, object_names)
 

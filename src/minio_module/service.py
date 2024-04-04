@@ -260,14 +260,19 @@ class MinIOService:
     def fget_object(self, bucket_name: str, object_names: List[str]):
         filename = "download.zip"
 
-        if len(object_names) == 1 and not object_names[0].endswith('/'):
+        if object_names is not None and len(object_names) == 1 and not object_names[0].endswith('/'):
             filename = object_names[0]
             download_url = self._get_object_url(bucket_name, object_names[0], expire_days=7)
             result = requests.get(download_url)
             file_content = io.BytesIO(result.content)
             media_type = "application/octet-stream"
+
         else:
             file_content = io.BytesIO()
+            if object_names is None:
+                object_names = self.list_objects(bucket_name=bucket_name)
+                object_names = object_names['result_details']
+                object_names = [item["_object_name"] for item in object_names]
             with zipfile.ZipFile(file_content, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
                 for item in object_names:
                     if item.endswith('/'):
