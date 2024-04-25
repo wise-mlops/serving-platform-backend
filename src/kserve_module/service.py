@@ -375,8 +375,8 @@ class KServeService:
         return i_svc_detail['spec']['predictor']
 
     def _get_service_account(self, i_svc_detail):
-        return self._get_model(i_svc_detail).get('serviceAccountName',
-                                                 'InferenceService is not ready to receive traffic yet.')
+        return self._get_predictor_spec(i_svc_detail).get('serviceAccountName',
+                                                          'InferenceService is not ready to receive traffic yet.')
 
     def _get_model(self, i_svc_detail):
         return self._get_predictor_spec(i_svc_detail)['model']
