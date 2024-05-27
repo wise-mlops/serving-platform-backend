@@ -269,7 +269,7 @@ class KServeService:
                 return False
             i_svc = self.get_kserve_client().create(v1beta1_i_svc)
             return i_svc
-        except ApiException as e:
+        except ApiException and BaseException as e:
             raise KServeApiError(e)
 
     def get_inference_service(self, name: str, namespace: str = 'kubeflow-user-example-com', parse_json: bool = False):
@@ -352,7 +352,7 @@ class KServeService:
 
     @staticmethod
     def _get_status(i_svc_detail):
-        return i_svc_detail['status']
+        return i_svc_detail.get('status', 'unknown')
 
     def _get_conditions(self, i_svc_detail):
         return self._get_status(i_svc_detail)['conditions']
@@ -367,8 +367,12 @@ class KServeService:
         return url.replace("http://", "")
 
     def _get_service_status(self, i_svc_detail):
-        return next((cond['status'] for cond in self._get_status(i_svc_detail).get('conditions', []) if
-                     cond['type'] == 'Ready'), 'False')
+        conditions = self._get_status(i_svc_detail)
+        if conditions != 'unknown':
+            return next((cond['status'] for cond in self._get_status(i_svc_detail).get('conditions', []) if
+                         cond['type'] == 'Ready'), 'False')
+        else:
+            return conditions
 
     @staticmethod
     def _get_predictor_spec(i_svc_detail):
